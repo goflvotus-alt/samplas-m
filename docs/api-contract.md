@@ -103,6 +103,26 @@ Response:
 
 Updates active guidelines.
 
+Current Vercel scaffold requires:
+
+```text
+x-admin-password: ADMIN_PASSWORD
+```
+
+Persistent storage requires:
+
+```text
+UPSTASH_REDIS_REST_URL
+UPSTASH_REDIS_REST_TOKEN
+```
+
+Accepted alternative names:
+
+```text
+KV_REST_API_URL
+KV_REST_API_TOKEN
+```
+
 Request:
 
 ```json
@@ -193,4 +213,3 @@ Allowed statuses:
 - `reviewed`
 - `useful`
 - `ignored`
-

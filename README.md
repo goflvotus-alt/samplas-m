@@ -185,6 +185,8 @@ OPENAI_API_KEY
 ADMIN_PASSWORD
 OPENAI_MODEL
 OPENAI_REASONING_EFFORT
+UPSTASH_REDIS_REST_URL
+UPSTASH_REDIS_REST_TOKEN
 ```
 
 After deployment, use this as the plugin Backend API URL:
@@ -207,3 +209,23 @@ The future full Admin system may eventually provide:
 - `/api/feedback`
 
 Do not remove the Express backend until the Vercel app is deployed, tested, and accepted as the new production backend.
+
+### Editable Vercel Guidelines
+
+The Vercel scaffold includes an editable `/admin/guidelines` page.
+
+To make guideline saves persistent in Vercel, add Redis storage credentials to the Vercel project:
+
+```text
+UPSTASH_REDIS_REST_URL
+UPSTASH_REDIS_REST_TOKEN
+```
+
+The implementation also accepts Vercel KV-style names:
+
+```text
+KV_REST_API_URL
+KV_REST_API_TOKEN
+```
+
+The page also requires `ADMIN_PASSWORD` when saving. Saved guidelines are read by `POST /api/generate-card-news` and included in the OpenAI prompt.

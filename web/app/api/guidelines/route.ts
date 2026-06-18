@@ -1,21 +1,47 @@
-import guidelines from "@/data/guidelines.sample.json";
+import { assertAdminPassword } from "@/lib/adminAuth";
+import { ApiError } from "@/lib/cardNews";
 import { jsonWithCors, optionsResponse } from "@/lib/cors";
+import { getGuidelines, saveGuidelines } from "@/lib/guidelineStore";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export function OPTIONS(): Response {
   return optionsResponse();
 }
 
-export function GET(): Response {
-  return jsonWithCors(guidelines);
+export async function GET(): Promise<Response> {
+  const { guidelines, storage } = await getGuidelines();
+  const response = jsonWithCors(guidelines);
+  response.headers.set("X-Samplas-Storage", storage);
+  return response;
 }
 
-export function PUT(): Response {
-  return jsonWithCors(
-    {
-      error: "Guideline editing is scaffolded but not connected to persistent storage yet."
-    },
-    501
-  );
+export async function PUT(request: Request): Promise<Response> {
+  try {
+    assertAdminPassword(request);
+
+    const body = await request.json();
+    const source = body && typeof body === "object" && !Array.isArray(body) ? (body as Record<string, unknown>) : {};
+    const snapshot = await saveGuidelines(source.guidelines, String(source.updatedBy || "admin"));
+
+    return jsonWithCors({
+      ok: true,
+      version: snapshot.version,
+      guidelines: snapshot.guidelines
+    });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return jsonWithCors({ error: error.message }, error.status);
+    }
+
+    const message = error instanceof Error ? error.message : "Could not save guidelines.";
+
+    return jsonWithCors(
+      {
+        error: message
+      },
+      message.includes("Guideline storage is not configured") ? 503 : 500
+    );
+  }
 }

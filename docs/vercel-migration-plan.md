@@ -132,6 +132,10 @@ Environment variables:
 ```bash
 OPENAI_API_KEY=
 ADMIN_PASSWORD=
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+KV_REST_API_URL=
+KV_REST_API_TOKEN=
 ```
 
 Rules:
@@ -139,6 +143,7 @@ Rules:
 - `OPENAI_API_KEY` must remain server-side only.
 - Never expose OpenAI keys to the plugin, browser UI, or Admin frontend bundle.
 - `ADMIN_PASSWORD` is only for future Admin login.
+- Redis REST variables are used by the editable guideline manager. The implementation accepts either `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` or `KV_REST_API_URL`/`KV_REST_API_TOKEN`.
 - MVP sessions may use secure HTTP-only cookies.
 - OAuth is not required for the first Admin version.
 

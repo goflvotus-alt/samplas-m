@@ -1,4 +1,5 @@
 import type { GeneratedCard, GenerateCardNewsResponse, ImageFocus, NormalizedRequest, PageInput } from "@/lib/types";
+import { formatGuidelinesForPrompt, getGuidelines, type Guidelines } from "@/lib/guidelineStore";
 
 type JsonObject = Record<string, unknown>;
 
@@ -16,6 +17,7 @@ export class ApiError extends Error {
 
 export async function generateCardNews(rawBody: unknown): Promise<GenerateCardNewsResponse> {
   const input = normalizeRequestBody(rawBody);
+  const { guidelines } = await getGuidelines();
 
   if (!process.env.OPENAI_API_KEY) {
     throw new ApiError(500, "OPENAI_API_KEY is missing. Add it in Vercel Project Settings > Environment Variables.");
@@ -27,7 +29,7 @@ export async function generateCardNews(rawBody: unknown): Promise<GenerateCardNe
       Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify(buildOpenAiRequest(input))
+    body: JSON.stringify(buildOpenAiRequest(input, guidelines))
   });
 
   const raw = await openAiResponse.text();
@@ -120,7 +122,7 @@ function normalizeImageFocus(value: unknown): ImageFocus {
   return ["center", "top", "bottom", "left", "right"].includes(focus) ? (focus as ImageFocus) : "center";
 }
 
-function buildOpenAiRequest(input: NormalizedRequest): JsonObject {
+function buildOpenAiRequest(input: NormalizedRequest, guidelines: Guidelines): JsonObject {
   return {
     model: process.env.OPENAI_MODEL || "gpt-5.5",
     reasoning: {
@@ -185,6 +187,7 @@ function buildOpenAiRequest(input: NormalizedRequest): JsonObject {
     },
     instructions: [
       "Polish user-provided card-news drafts for a multi-slide post.",
+      "Follow the active SAMPLAS M guidelines supplied in the user prompt.",
       "Preserve the user's intent, order, and concrete facts.",
       "Do not invent dates, names, statistics, or claims not present in the input.",
       "Return exactly one card for each requested page and preserve each page's format value.",
@@ -196,7 +199,7 @@ function buildOpenAiRequest(input: NormalizedRequest): JsonObject {
         content: [
           {
             type: "input_text",
-            text: buildPromptText(input)
+            text: buildPromptText(input, guidelines)
           }
         ]
       }
@@ -204,9 +207,14 @@ function buildOpenAiRequest(input: NormalizedRequest): JsonObject {
   };
 }
 
-function buildPromptText(input: NormalizedRequest): string {
+function buildPromptText(input: NormalizedRequest, guidelines: Guidelines): string {
+  const activeGuidelines = formatGuidelinesForPrompt(guidelines) || "None";
+
   if (input.mode === "pages") {
     return [
+      "Active SAMPLAS M guidelines:",
+      activeGuidelines,
+      "",
       `Overall caption draft: ${input.postCaption || "None"}`,
       `Overall mood: ${input.mood || "Not specified"}`,
       `Page count: ${input.cardCount}`,
@@ -217,6 +225,9 @@ function buildPromptText(input: NormalizedRequest): string {
   }
 
   return [
+    "Active SAMPLAS M guidelines:",
+    activeGuidelines,
+    "",
     `Topic: ${input.topic}`,
     `Tone: ${input.tone}`,
     `Card count: ${input.cardCount}`,

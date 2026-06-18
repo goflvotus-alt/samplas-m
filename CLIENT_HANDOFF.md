@@ -66,6 +66,11 @@ Optional environment variables:
 ```bash
 OPENAI_MODEL=gpt-5.5
 OPENAI_REASONING_EFFORT=low
+UPSTASH_REDIS_REST_URL=your-redis-rest-url
+UPSTASH_REDIS_REST_TOKEN=your-redis-rest-token
+# Alternative accepted names:
+KV_REST_API_URL=your-redis-rest-url
+KV_REST_API_TOKEN=your-redis-rest-token
 ```
 
 After deployment, test:
@@ -172,18 +177,19 @@ Implemented as Vercel scaffold:
 
 - `web/`
 - `/admin`
-- `/admin/guidelines`
+- `/admin/guidelines` editable guideline manager
 - `/admin/brands`
 - `/admin/feedback`
 - `/admin/test`
 - `/api/health`
 - `/api/generate-card-news`
+- `/api/guidelines`
+- `/api/guidelines/history`
 
 Not implemented yet:
 
 - Persistent admin login
-- Database storage
-- Guideline editing
+- Brand and feedback database storage
 - Brand database editing
 - Feedback review dashboard
 
