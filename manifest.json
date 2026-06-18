@@ -1,0 +1,13 @@
+{
+  "name": "SAMPLAS M",
+  "id": "samplas-m-card-news-generator",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "ui": "ui.html",
+  "documentAccess": "dynamic-page",
+  "editorType": ["figma", "buzz"],
+  "networkAccess": {
+    "allowedDomains": ["*"],
+    "reasoning": "SAMPLAS M connects to a user-configured backend API for AI card-news generation."
+  }
+}

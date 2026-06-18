@@ -1,0 +1,10 @@
+[
+  {
+    "id": "sample-feedback-001",
+    "timestamp": "2026-06-18T00:00:00.000Z",
+    "originalInput": {},
+    "generatedOutput": {},
+    "feedback": "The tone should be more restrained and less promotional.",
+    "status": "new"
+  }
+]

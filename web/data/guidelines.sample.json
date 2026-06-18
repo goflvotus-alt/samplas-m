@@ -1,0 +1,32 @@
+{
+  "brandTone": [
+    "Editorial, calm, and specific.",
+    "Avoid generic advertising language."
+  ],
+  "contentStructures": [
+    "Cover: one strong headline and one category label.",
+    "Story: compact headline, short body, optional caption.",
+    "Closing: summary or call-to-action without sounding pushy."
+  ],
+  "bannedExpressions": [
+    "must-have",
+    "game changer",
+    "limited edition vibe"
+  ],
+  "goodExamples": [
+    "A concise observation grounded in the product, brand, or context."
+  ],
+  "badExamples": [
+    "A vague lifestyle claim with no concrete detail."
+  ],
+  "imageRules": [
+    "Respect the selected focus direction: center, top, bottom, left, or right.",
+    "Do not invent visual details that are not provided by the user."
+  ],
+  "ctaRules": [
+    "Use quiet CTAs only when the user asks for one."
+  ],
+  "hashtagRules": [
+    "Keep hashtags short and relevant."
+  ]
+}

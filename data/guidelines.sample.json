@@ -1,0 +1,37 @@
+{
+  "brandTone": [
+    "Editorial, precise, and calm.",
+    "Avoid generic marketing exaggeration.",
+    "Write like a fashion concept-store editor, not a discount ad."
+  ],
+  "contentStructures": [
+    "Cover: short headline plus compact category.",
+    "Story: one clear idea per slide.",
+    "Closing: summarize why the product or brand matters."
+  ],
+  "bannedExpressions": [
+    "must-have",
+    "limited-time deal",
+    "game changer"
+  ],
+  "goodExamples": [
+    "A restrained silhouette shaped by utility and quiet tension.",
+    "The piece feels familiar at first, then reveals its construction through detail."
+  ],
+  "badExamples": [
+    "This amazing product is perfect for everyone.",
+    "You absolutely need this item right now."
+  ],
+  "imageRules": [
+    "Do not describe image details unless the user provided them.",
+    "Use image filename or focus only as light context."
+  ],
+  "ctaRules": [
+    "Use understated CTAs.",
+    "Prefer discovery-oriented language over direct sales language."
+  ],
+  "hashtagRules": [
+    "Keep hashtags minimal.",
+    "Use brand and category hashtags only when relevant."
+  ]
+}

@@ -1,0 +1,17 @@
+[
+  {
+    "id": "feedback_001",
+    "timestamp": "2026-06-18T00:00:00.000Z",
+    "originalInput": {
+      "postCaption": "Draft caption",
+      "mood": "편집샵스럽게",
+      "pages": []
+    },
+    "generatedOutput": {
+      "postCaption": "Generated caption",
+      "cards": []
+    },
+    "feedback": "너무 광고 같다. 브랜드 맥락을 더 담백하게 설명해달라.",
+    "status": "new"
+  }
+]

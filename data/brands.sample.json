@@ -1,0 +1,20 @@
+[
+  {
+    "brandName": "Sample Brand",
+    "designer": "Designer Name",
+    "keywords": [
+      "minimal",
+      "tailoring",
+      "utility"
+    ],
+    "description": "A concise description of the brand's editorial context.",
+    "comparableBrands": [
+      "Comparable Brand A",
+      "Comparable Brand B"
+    ],
+    "notes": [
+      "Use restrained language.",
+      "Mention construction only when relevant."
+    ]
+  }
+]

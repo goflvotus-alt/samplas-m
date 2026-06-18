@@ -1,0 +1,14 @@
+{
+  "name": "samplas-m-figma-plugin",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A Figma plugin that generates card-news designs from an existing CARD_TEMPLATE frame.",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "watch": "tsc -p tsconfig.json --watch"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.105.0",
+    "typescript": "^5.5.4"
+  }
+}
