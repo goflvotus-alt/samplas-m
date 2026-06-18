@@ -529,7 +529,15 @@ function hasSize(node: SceneNode): node is SizedSceneNode {
   return "width" in node && "height" in node;
 }
 
+function hasOpacity(node: SceneNode): node is SceneNode & { opacity: number } {
+  return "opacity" in node;
+}
+
 function setLayerOpacity(node: SceneNode, opacity: number): void {
+  if (!hasOpacity(node)) {
+    throw new Error(`"${OVERLAY_LAYER}" must be a layer type that supports opacity.`);
+  }
+
   const safeOpacity = Math.max(0, Math.min(80, Number(opacity) || 0));
   node.opacity = safeOpacity / 100;
 }
