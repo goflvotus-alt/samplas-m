@@ -14,6 +14,8 @@ type GuidelineKey =
   | "hashtagRules";
 
 type Guidelines = Record<GuidelineKey, string[]>;
+type GuidelineDrafts = Record<GuidelineKey, string>;
+type SaveState = "idle" | "saving" | "saved" | "error";
 
 type HistoryEntry = {
   version: string;
@@ -64,28 +66,28 @@ const sections: Array<{ key: GuidelineKey; label: string; description: string }>
   }
 ];
 
-const emptyGuidelines = sections.reduce((guidelines, section) => {
-  guidelines[section.key] = [];
-  return guidelines;
-}, {} as Guidelines);
+const emptyDrafts = sections.reduce((drafts, section) => {
+  drafts[section.key] = "";
+  return drafts;
+}, {} as GuidelineDrafts);
 
 export default function GuidelinesEditor(): ReactElement {
-  const [guidelines, setGuidelines] = useState<Guidelines>(emptyGuidelines);
+  const [drafts, setDrafts] = useState<GuidelineDrafts>(emptyDrafts);
   const [selectedKey, setSelectedKey] = useState<GuidelineKey>("brandTone");
   const [adminPassword, setAdminPassword] = useState("");
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [selectedVersion, setSelectedVersion] = useState("");
   const [status, setStatus] = useState("Loading guidelines...");
   const [storage, setStorage] = useState("unknown");
-  const [saving, setSaving] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
 
   const selectedSection = useMemo(
     () => sections.find((section) => section.key === selectedKey) || sections[0],
     [selectedKey]
   );
 
-  const selectedText = guidelines[selectedKey].join("\n");
-  const totalRules = sections.reduce((count, section) => count + guidelines[section.key].length, 0);
+  const selectedText = drafts[selectedKey];
+  const totalRules = sections.reduce((count, section) => count + toRules(drafts[section.key]).length, 0);
 
   useEffect(() => {
     const storedPassword = window.sessionStorage.getItem("samplas-admin-password") || "";
@@ -97,30 +99,35 @@ export default function GuidelinesEditor(): ReactElement {
     setStatus("Loading guidelines...");
 
     try {
-      const [guidelineResponse, historyResponse] = await Promise.all([
-        fetch("/api/guidelines", { cache: "no-store" }),
-        fetch("/api/guidelines/history", { cache: "no-store" })
-      ]);
-
+      const guidelineResponse = await fetch("/api/guidelines", { cache: "no-store" });
       const nextGuidelines = normalizeGuidelines(await guidelineResponse.json());
-      const nextHistory = normalizeHistory(await historyResponse.json());
 
-      setGuidelines(nextGuidelines);
-      setHistory(nextHistory);
+      setDrafts(guidelinesToDrafts(nextGuidelines));
       setStorage(guidelineResponse.headers.get("X-Samplas-Storage") || "unknown");
       setSelectedVersion("");
       setStatus(guidelineResponse.ok ? "Loaded." : "Could not load guidelines.");
+      await reloadHistorySafely();
     } catch (error) {
+      console.error("[guidelines] Reload failed", error);
       setStatus(error instanceof Error ? error.message : "Could not load guidelines.");
     }
   }
 
   async function save(): Promise<void> {
-    setSaving(true);
+    const nextGuidelines = draftsToGuidelines(drafts);
+    setSaveState("saving");
     setStatus("Saving guidelines...");
     window.sessionStorage.setItem("samplas-admin-password", adminPassword);
 
     try {
+      console.info("[guidelines] Sending save request", {
+        keys: Object.keys(nextGuidelines),
+        ruleCounts: sections.reduce((counts, section) => {
+          counts[section.key] = nextGuidelines[section.key].length;
+          return counts;
+        }, {} as Record<GuidelineKey, number>)
+      });
+
       const response = await fetch("/api/guidelines", {
         method: "PUT",
         headers: {
@@ -129,39 +136,66 @@ export default function GuidelinesEditor(): ReactElement {
         },
         body: JSON.stringify({
           updatedBy: "admin",
-          guidelines
+          guidelines: nextGuidelines
         })
       });
 
       const json = (await response.json()) as { ok?: boolean; error?: string; version?: string; guidelines?: Guidelines };
 
       if (!response.ok) {
+        console.error("[guidelines] Save request failed", {
+          status: response.status,
+          response: json
+        });
         setStatus(json.error || "Could not save guidelines.");
+        setSaveState("error");
         return;
       }
 
       if (json.guidelines) {
-        setGuidelines(normalizeGuidelines(json.guidelines));
+        const savedGuidelines = normalizeGuidelines(json.guidelines);
+        setDrafts(guidelinesToDrafts(savedGuidelines));
       }
 
+      await reloadFromRedisAfterSave();
       setStatus(json.version ? `Saved. Version: ${json.version}` : "Saved.");
-      await reloadHistoryOnly();
+      setSaveState("saved");
+      window.setTimeout(() => setSaveState("idle"), 2000);
     } catch (error) {
+      console.error("[guidelines] Save threw an error", error);
       setStatus(error instanceof Error ? error.message : "Could not save guidelines.");
+      setSaveState("error");
     } finally {
-      setSaving(false);
+      window.setTimeout(() => setSaveState((current) => (current === "saving" ? "idle" : current)), 300);
     }
   }
 
-  async function reloadHistoryOnly(): Promise<void> {
-    const response = await fetch("/api/guidelines/history", { cache: "no-store" });
-    setHistory(normalizeHistory(await response.json()));
+  async function reloadFromRedisAfterSave(): Promise<void> {
+    const guidelineResponse = await fetch("/api/guidelines", { cache: "no-store" });
+    const savedGuidelines = normalizeGuidelines(await guidelineResponse.json());
+
+    setDrafts(guidelinesToDrafts(savedGuidelines));
+    setStorage(guidelineResponse.headers.get("X-Samplas-Storage") || storage);
+    await reloadHistorySafely();
+  }
+
+  async function reloadHistorySafely(): Promise<void> {
+    try {
+      const response = await fetch("/api/guidelines/history", { cache: "no-store" });
+      setHistory(normalizeHistory(await response.json()));
+    } catch (error) {
+      console.error("[guidelines] History reload failed", error);
+    }
   }
 
   function updateSelectedText(value: string): void {
-    setGuidelines((current) => ({
+    if (saveState === "saved" || saveState === "error") {
+      setSaveState("idle");
+    }
+
+    setDrafts((current) => ({
       ...current,
-      [selectedKey]: normalizeRules(value)
+      [selectedKey]: value
     }));
   }
 
@@ -173,9 +207,13 @@ export default function GuidelinesEditor(): ReactElement {
       return;
     }
 
-    setGuidelines(normalizeGuidelines(entry.guidelines));
+    const restoredGuidelines = normalizeGuidelines(entry.guidelines);
+    setDrafts(guidelinesToDrafts(restoredGuidelines));
     setStatus("Previous version loaded into the editor. Click Save to make it active.");
   }
+
+  const saveButtonClassName = `button save-button${saveState === "saved" ? " saved" : ""}${saveState === "error" ? " error" : ""}`;
+  const saveButtonLabel = saveState === "saved" ? "✓ Saved" : saveState === "saving" ? "Saving..." : "Save";
 
   return (
     <div className="grid two">
@@ -194,7 +232,7 @@ export default function GuidelinesEditor(): ReactElement {
               type="button"
             >
               <span>{section.label}</span>
-              <small>{guidelines[section.key].length} rules</small>
+              <small>{toRules(drafts[section.key]).length} rules</small>
             </button>
           ))}
         </div>
@@ -235,10 +273,10 @@ export default function GuidelinesEditor(): ReactElement {
           </div>
 
           <div className="button-row">
-            <button className="button" disabled={saving} onClick={save} type="button">
-              Save
+            <button className={saveButtonClassName} disabled={saveState === "saving"} onClick={save} type="button">
+              {saveButtonLabel}
             </button>
-            <button className="button secondary" disabled={saving} onClick={reloadAll} type="button">
+            <button className="button secondary" disabled={saveState === "saving"} onClick={reloadAll} type="button">
               Reload
             </button>
           </div>
@@ -300,6 +338,20 @@ function normalizeHistory(input: unknown): HistoryEntry[] {
     .filter((item): item is HistoryEntry => Boolean(item));
 }
 
-function normalizeRules(value: string): string[] {
+function guidelinesToDrafts(guidelines: Guidelines): GuidelineDrafts {
+  return sections.reduce((drafts, section) => {
+    drafts[section.key] = guidelines[section.key].join("\n");
+    return drafts;
+  }, {} as GuidelineDrafts);
+}
+
+function draftsToGuidelines(drafts: GuidelineDrafts): Guidelines {
+  return sections.reduce((guidelines, section) => {
+    guidelines[section.key] = toRules(drafts[section.key]);
+    return guidelines;
+  }, {} as Guidelines);
+}
+
+function toRules(value: string): string[] {
   return Array.from(new Set(value.split("\n").map((rule) => rule.trim()).filter(Boolean)));
 }

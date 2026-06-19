@@ -23,14 +23,23 @@ export async function PUT(request: Request): Promise<Response> {
 
     const body = await request.json();
     const source = body && typeof body === "object" && !Array.isArray(body) ? (body as Record<string, unknown>) : {};
+    console.info("[guidelines] Save request received", {
+      hasGuidelines: Boolean(source.guidelines),
+      keys: source.guidelines && typeof source.guidelines === "object" ? Object.keys(source.guidelines) : [],
+      storage: "redis"
+    });
+
     const snapshot = await saveGuidelines(source.guidelines, String(source.updatedBy || "admin"));
 
     return jsonWithCors({
       ok: true,
+      saved: true,
       version: snapshot.version,
       guidelines: snapshot.guidelines
     });
   } catch (error) {
+    console.error("[guidelines] Save failed", error);
+
     if (error instanceof ApiError) {
       return jsonWithCors({ error: error.message }, error.status);
     }

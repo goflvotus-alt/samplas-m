@@ -112,15 +112,31 @@ export async function saveGuidelines(input: unknown, updatedBy: string): Promise
     guidelines
   };
 
+  const serializedGuidelines = JSON.stringify(guidelines);
+  await redisCommand<string>(["SET", GUIDELINES_KEY, serializedGuidelines]);
+
+  const stored = await redisCommand<string | null>(["GET", GUIDELINES_KEY]);
+  if (stored !== serializedGuidelines) {
+    console.error("[guidelines] Redis verification failed", {
+      key: GUIDELINES_KEY,
+      expectedLength: serializedGuidelines.length,
+      storedLength: stored?.length || 0
+    });
+    throw new Error("Guidelines were written but verification failed.");
+  }
+
   const results = await redisPipeline([
-    ["SET", GUIDELINES_KEY, JSON.stringify(guidelines)],
     ["LPUSH", GUIDELINE_HISTORY_KEY, JSON.stringify(snapshot)],
     ["LTRIM", GUIDELINE_HISTORY_KEY, 0, HISTORY_LIMIT - 1]
   ]);
 
   const failed = results.find((result) => result.error);
   if (failed?.error) {
-    throw new Error(failed.error);
+    console.error("[guidelines] Redis history write failed", {
+      activeKey: GUIDELINES_KEY,
+      historyKey: GUIDELINE_HISTORY_KEY,
+      error: failed.error
+    });
   }
 
   return snapshot;
