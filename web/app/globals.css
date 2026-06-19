@@ -295,6 +295,21 @@ p {
   font-size: 16px;
 }
 
+.status-message {
+  background: var(--soft-blue);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  color: var(--ink);
+  font-weight: 800;
+  line-height: 1.55;
+  padding: 14px;
+}
+
+.status-message.error {
+  background: var(--ink);
+  color: #ffffff;
+}
+
 .rule-list {
   display: grid;
   gap: 8px;

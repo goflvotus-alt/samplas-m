@@ -114,6 +114,14 @@ export default function GuidelinesEditor(): ReactElement {
   }
 
   async function save(): Promise<void> {
+    if (!adminPassword.trim()) {
+      const message = "Admin Password를 입력해야 저장됩니다.";
+      console.error("[guidelines] Save blocked", { reason: "missing-admin-password" });
+      setStatus(message);
+      setSaveState("error");
+      return;
+    }
+
     const nextGuidelines = draftsToGuidelines(drafts);
     setSaveState("saving");
     setStatus("Saving guidelines...");
@@ -297,7 +305,7 @@ export default function GuidelinesEditor(): ReactElement {
             Restore Into Editor
           </button>
 
-          {status ? <p>{status}</p> : null}
+          {status ? <div className={`status-message ${saveState === "error" ? "error" : ""}`}>{status}</div> : null}
         </div>
       </section>
     </div>
