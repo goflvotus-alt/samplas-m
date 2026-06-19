@@ -6,6 +6,7 @@ export default function LoginPage(): ReactElement {
     <main className="login-shell">
       <section className="login-copy">
         <img className="login-logo" src="/samplas-logo.png" alt="SAMPLAS" />
+        <span className="brand-byline">by Jonghyun Je</span>
         <p className="eyebrow">Editorial Intelligence System</p>
         <h1>관리자 로그인</h1>
         <p>

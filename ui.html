@@ -6,16 +6,16 @@
     <title>SAMPLAS M</title>
     <style>
       :root {
-        color-scheme: light dark;
-        --bg: var(--figma-color-bg, #ffffff);
-        --bg-secondary: var(--figma-color-bg-secondary, #f7f7f7);
-        --border: var(--figma-color-border, #d9d9d9);
-        --text: var(--figma-color-text, #1f1f1f);
-        --muted: var(--figma-color-text-secondary, #6b6b6b);
-        --brand: #16a085;
-        --brand-strong: #117964;
+        color-scheme: light;
+        --bg: #ffffff;
+        --bg-secondary: #f2f7ff;
+        --border: #000000;
+        --text: #000000;
+        --muted: #777777;
+        --brand: #005bff;
+        --brand-strong: #003cff;
         --danger: #d14;
-        --radius: 8px;
+        --radius: 0;
       }
 
       * {
@@ -26,7 +26,7 @@
         margin: 0;
         background: var(--bg);
         color: var(--text);
-        font: 12px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font: 12px/1.45 "Apple SD Gothic Neo", "Apple Gothic", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
 
       .app {
@@ -37,28 +37,39 @@
 
       header {
         border-bottom: 1px solid var(--border);
-        padding: 16px;
+        padding: 12px 14px;
       }
 
-      h1 {
-        margin: 0;
-        font-size: 18px;
-        font-weight: 700;
-        letter-spacing: 0;
+      .plugin-brand {
+        display: grid;
+        gap: 3px;
+      }
+
+      .plugin-logo {
+        display: block;
+        height: auto;
+        width: 124px;
+      }
+
+      .plugin-byline {
+        color: #777777;
+        font-size: 10px;
+        font-weight: 800;
+        line-height: 1;
       }
 
       main {
         display: flex;
         flex: 1;
         flex-direction: column;
-        gap: 14px;
+        gap: 12px;
         overflow-y: auto;
-        padding: 16px;
+        padding: 14px;
       }
 
       section {
         border-bottom: 1px solid var(--border);
-        padding-bottom: 14px;
+        padding-bottom: 12px;
       }
 
       section:last-of-type {
@@ -67,16 +78,16 @@
       }
 
       h2 {
-        margin: 0 0 10px;
-        font-size: 13px;
-        font-weight: 700;
+        margin: 0 0 8px;
+        font-size: 14px;
+        font-weight: 900;
         letter-spacing: 0;
       }
 
       .field {
         display: grid;
-        gap: 6px;
-        margin-bottom: 10px;
+        gap: 5px;
+        margin-bottom: 9px;
       }
 
       .hint {
@@ -100,7 +111,7 @@
 
       label {
         color: var(--muted);
-        font-weight: 600;
+        font-weight: 900;
       }
 
       input,
@@ -116,14 +127,14 @@
       select {
         width: 100%;
         border: 1px solid var(--border);
-        border-radius: 6px;
+        border-radius: 0;
         background: var(--bg);
         color: var(--text);
-        padding: 8px;
+        padding: 7px 8px;
       }
 
       textarea {
-        min-height: 78px;
+        min-height: 70px;
         resize: vertical;
       }
 
@@ -156,7 +167,6 @@
         min-width: 118px;
         gap: 4px;
         border: 1px solid var(--border);
-        border-radius: var(--radius);
         background: var(--bg);
         box-shadow: 0 8px 22px rgba(0, 0, 0, 0.16);
         padding: 6px;
@@ -168,7 +178,7 @@
 
       .context-menu button {
         min-height: 28px;
-        border-radius: 5px;
+        border-radius: 0;
         background: transparent;
         color: var(--text);
         padding: 5px 8px;
@@ -211,7 +221,7 @@
       .page-tab {
         min-height: 26px;
         border: 1px solid var(--border);
-        background: var(--bg-secondary);
+        background: var(--bg);
         color: var(--text);
         padding: 4px 8px;
       }
@@ -230,6 +240,34 @@
         white-space: nowrap;
       }
 
+      .image-upload-grid {
+        display: grid;
+        gap: 8px;
+        grid-template-columns: minmax(0, 1fr) 104px;
+        align-items: start;
+      }
+
+      .image-preview-popover {
+        border: 1px solid var(--border);
+        display: grid;
+        gap: 6px;
+        padding: 6px;
+      }
+
+      .image-preview-popover.hidden {
+        display: none;
+      }
+
+      .image-preview {
+        aspect-ratio: 1 / 1;
+        background-color: var(--bg-secondary);
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: cover;
+        border: 1px solid var(--border);
+        width: 100%;
+      }
+
       .actions {
         display: flex;
         flex-wrap: wrap;
@@ -238,7 +276,7 @@
 
       button {
         border: 0;
-        border-radius: 6px;
+        border-radius: 0;
         cursor: pointer;
         min-height: 34px;
         padding: 8px 11px;
@@ -246,7 +284,7 @@
       }
 
       button.primary {
-        background: var(--brand);
+        background: var(--text);
         color: #ffffff;
       }
 
@@ -257,7 +295,7 @@
       button.secondary,
       button.icon {
         border: 1px solid var(--border);
-        background: var(--bg-secondary);
+        background: var(--bg);
         color: var(--text);
       }
 
@@ -281,7 +319,6 @@
         display: grid;
         gap: 8px;
         border: 1px solid var(--border);
-        border-radius: var(--radius);
         padding: 10px;
       }
 
@@ -304,7 +341,10 @@
   <body>
     <div class="app">
       <header>
-        <h1>SAMPLAS M</h1>
+        <div class="plugin-brand">
+          <img class="plugin-logo" src="data:image/png;base64,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" alt="SAMPLAS" />
+          <span class="plugin-byline">by Jonghyun Je</span>
+        </div>
       </header>
 
       <main>
@@ -370,7 +410,8 @@
 
             <div class="field">
               <label for="pageCategory">Category</label>
-              <input id="pageCategory" type="text" value="Category" />
+              <input id="pageCategory" type="text" value="Category" list="contentCategoryOptions" />
+              <datalist id="contentCategoryOptions"></datalist>
             </div>
           </div>
 
@@ -386,8 +427,13 @@
 
           <div class="field">
             <label for="pageImage">사진</label>
-            <input id="pageImage" type="file" accept="image/png,image/jpeg,image/webp" />
-            <div id="pageImageName" class="file-name"></div>
+            <div class="image-upload-grid">
+              <input id="pageImage" type="file" accept="image/png,image/jpeg,image/webp" />
+              <div id="imagePreviewPopover" class="image-preview-popover hidden">
+                <div id="imagePreview" class="image-preview"></div>
+                <div id="pageImageName" class="file-name"></div>
+              </div>
+            </div>
           </div>
 
           <div class="field">
@@ -446,10 +492,14 @@
       const removePageButton = $("removePageButton");
       const refreshFormatsButton = $("refreshFormatsButton");
       const pageTabs = $("pageTabs");
+      const contentCategoryOptions = $("contentCategoryOptions");
+      const imagePreviewPopover = $("imagePreviewPopover");
+      const imagePreview = $("imagePreview");
 
       let generatedFrames = [];
       let currentPageIndex = 0;
       let availableFormats = [];
+      let contentCategories = [];
       let isBackendUrlLocked = false;
       let pages = [createPage()];
 
@@ -461,7 +511,8 @@
           text: "",
           imageFocus: "center",
           imageFile: null,
-          imageName: ""
+          imageName: "",
+          imagePreviewUrl: ""
         };
       }
 
@@ -482,6 +533,7 @@
 
           setApiStatus("Backend connected.", false, true);
           setStatus("Backend is connected.");
+          await loadContentCategories();
         } catch (error) {
           const message = toUserErrorMessage(error, "Backend test failed.");
           setApiStatus(message, true);
@@ -629,6 +681,11 @@
       });
 
       removePageButton.addEventListener("click", () => {
+        const removedPage = pages[currentPageIndex];
+        if (removedPage && removedPage.imagePreviewUrl) {
+          URL.revokeObjectURL(removedPage.imagePreviewUrl);
+        }
+
         if (pages.length === 1) {
           pages = [createPage()];
           goToPage(0);
@@ -648,9 +705,23 @@
       $("pageImage").addEventListener("change", () => {
         const file = $("pageImage").files[0];
         const page = pages[currentPageIndex];
+        if (page.imagePreviewUrl) {
+          URL.revokeObjectURL(page.imagePreviewUrl);
+        }
         page.imageFile = file || null;
         page.imageName = file ? file.name : "";
-        $("pageImageName").textContent = page.imageName;
+        page.imagePreviewUrl = file ? URL.createObjectURL(file) : "";
+        updateImagePreview();
+      });
+
+      $("pageImageFocus").addEventListener("change", () => {
+        pages[currentPageIndex].imageFocus = $("pageImageFocus").value;
+        updateImagePreview();
+      });
+
+      $("pageFormat").addEventListener("change", () => {
+        pages[currentPageIndex].format = $("pageFormat").value;
+        updateImagePreview();
       });
 
       exportButton.addEventListener("click", () => {
@@ -719,7 +790,7 @@
         $("pageText").value = page.text;
         $("pageImageFocus").value = page.imageFocus;
         $("pageImage").value = "";
-        $("pageImageName").textContent = page.imageName;
+        updateImagePreview();
         $("pageTitle").textContent = `Page ${currentPageIndex + 1}`;
         $("pageCount").textContent = `${currentPageIndex + 1} / ${pages.length}`;
         prevPageButton.disabled = currentPageIndex === 0;
@@ -765,11 +836,11 @@
 
       function getFallbackFormats() {
         return [
-          { value: "cover", label: "Cover" },
-          { value: "story", label: "Story" },
-          { value: "information", label: "Information" },
-          { value: "quote", label: "Quote" },
-          { value: "closing", label: "Closing" }
+          { value: "cover", label: "Cover", imageAspectRatio: 1 },
+          { value: "story", label: "Story", imageAspectRatio: 1 },
+          { value: "information", label: "Information", imageAspectRatio: 1 },
+          { value: "quote", label: "Quote", imageAspectRatio: 1 },
+          { value: "closing", label: "Closing", imageAspectRatio: 1 }
         ];
       }
 
@@ -790,6 +861,34 @@
           button.addEventListener("click", () => goToPage(index));
           pageTabs.appendChild(button);
         });
+      }
+
+      async function loadContentCategories() {
+        const rawUrl = backendUrlInput.value.trim();
+        if (!rawUrl) return;
+
+        const backendUrl = normalizeBackendUrl(rawUrl);
+        const response = await fetchWithTimeout(`${backendUrl}/api/guidelines`, {
+          timeoutMs: 12000
+        });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok || !Array.isArray(data.categories)) {
+          return;
+        }
+
+        contentCategories = data.categories.map((category) => String(category.name || "").trim()).filter(Boolean);
+        renderContentCategoryOptions();
+      }
+
+      function renderContentCategoryOptions() {
+        contentCategoryOptions.innerHTML = "";
+
+        for (const category of contentCategories) {
+          const option = document.createElement("option");
+          option.value = category;
+          contentCategoryOptions.appendChild(option);
+        }
       }
 
       function validatePages() {
@@ -891,6 +990,42 @@
         }
       }
 
+      function updateImagePreview() {
+        const page = pages[currentPageIndex];
+        $("pageImageName").textContent = page.imageName;
+
+        if (!page.imagePreviewUrl) {
+          imagePreviewPopover.classList.add("hidden");
+          imagePreview.style.backgroundImage = "";
+          return;
+        }
+
+        imagePreviewPopover.classList.remove("hidden");
+        imagePreview.style.aspectRatio = `${getCurrentImageAspectRatio()} / 1`;
+        imagePreview.style.backgroundImage = `url("${page.imagePreviewUrl}")`;
+        imagePreview.style.backgroundPosition = getImagePreviewPosition(page.imageFocus);
+      }
+
+      function getCurrentImageAspectRatio() {
+        const page = pages[currentPageIndex];
+        const format = availableFormats.find((item) => item.value === page.format);
+        const aspectRatio = Number(format && format.imageAspectRatio);
+
+        return Number.isFinite(aspectRatio) && aspectRatio > 0 ? aspectRatio : 1;
+      }
+
+      function getImagePreviewPosition(focus) {
+        const positions = {
+          center: "center center",
+          top: "center top",
+          bottom: "center bottom",
+          left: "left center",
+          right: "right center"
+        };
+
+        return positions[focus] || positions.center;
+      }
+
       function normalizeCard(card) {
         return {
           format: String(card.format || ""),
@@ -946,6 +1081,7 @@
         if (backendUrl) {
           lockBackendUrl(true);
           setApiStatus("Saved backend URL loaded. Click Test Backend.");
+          loadContentCategories().catch(() => {});
         } else {
           unlockBackendUrl();
           setApiStatus("Backend URL을 붙여넣고 Test Backend를 눌러주세요.");

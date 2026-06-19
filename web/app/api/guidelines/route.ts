@@ -25,7 +25,10 @@ export async function PUT(request: Request): Promise<Response> {
     const source = body && typeof body === "object" && !Array.isArray(body) ? (body as Record<string, unknown>) : {};
     console.info("[guidelines] Save request received", {
       hasGuidelines: Boolean(source.guidelines),
-      keys: source.guidelines && typeof source.guidelines === "object" ? Object.keys(source.guidelines) : [],
+      categories:
+        source.guidelines && typeof source.guidelines === "object" && Array.isArray((source.guidelines as Record<string, unknown>).categories)
+          ? ((source.guidelines as Record<string, unknown>).categories as unknown[]).length
+          : 0,
       storage: "redis"
     });
 

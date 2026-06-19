@@ -88,14 +88,30 @@ Response:
 
 ```json
 {
-  "brandTone": [],
-  "contentStructures": [],
-  "bannedExpressions": [],
-  "goodExamples": [],
-  "badExamples": [],
-  "imageRules": [],
-  "ctaRules": [],
-  "hashtagRules": []
+  "version": 2,
+  "activeCategoryId": "category",
+  "categories": [
+    {
+      "id": "category",
+      "name": "Category",
+      "rules": {
+        "brandTone": [],
+        "contentStructures": [],
+        "bannedExpressions": [],
+        "goodExamples": [],
+        "badExamples": [],
+        "imageRules": []
+      },
+      "references": [
+        {
+          "id": "reference-1",
+          "title": "Reference title",
+          "url": "https://example.com",
+          "note": "Notes for future AI generation."
+        }
+      ]
+    }
+  ]
 }
 ```
 
@@ -103,10 +119,11 @@ Response:
 
 Updates active guidelines.
 
-Current Vercel scaffold requires:
+Current Vercel scaffold accepts either:
 
 ```text
-x-admin-password: ADMIN_PASSWORD
+Admin session cookie after login
+x-admin-password: ADMIN_PASSWORD for direct API calls
 ```
 
 Persistent storage requires:
@@ -129,14 +146,23 @@ Request:
 {
   "updatedBy": "admin",
   "guidelines": {
-    "brandTone": [],
-    "contentStructures": [],
-    "bannedExpressions": [],
-    "goodExamples": [],
-    "badExamples": [],
-    "imageRules": [],
-    "ctaRules": [],
-    "hashtagRules": []
+    "version": 2,
+    "activeCategoryId": "category",
+    "categories": [
+      {
+        "id": "category",
+        "name": "Category",
+        "rules": {
+          "brandTone": [],
+          "contentStructures": [],
+          "bannedExpressions": [],
+          "goodExamples": [],
+          "badExamples": [],
+          "imageRules": []
+        },
+        "references": []
+      }
+    ]
   }
 }
 ```

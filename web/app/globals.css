@@ -71,6 +71,14 @@ button {
   max-width: 132px;
 }
 
+.brand-byline {
+  color: #777777;
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
 .brand-subtitle {
   color: var(--accent);
   font-size: 12px;
@@ -461,6 +469,75 @@ p {
   line-height: 1.3;
 }
 
+.guideline-topline {
+  align-items: stretch;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(280px, 1fr) minmax(170px, 0.55fr) auto;
+}
+
+.content-category-switcher {
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+  padding-bottom: 8px;
+}
+
+.content-category-switcher > span {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.content-category-switcher > div:first-of-type {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.content-category-switcher button {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+  min-height: 28px;
+  padding: 5px 8px;
+}
+
+.content-category-switcher button.active,
+.content-category-switcher button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.category-add {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: minmax(140px, 1fr) auto;
+}
+
+.category-add input,
+.reference-meta-fields input,
+.reference-row textarea {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  min-height: 30px;
+  outline: 0;
+  padding: 6px 7px;
+  width: 100%;
+}
+
+.guideline-actions {
+  align-content: start;
+  justify-content: flex-end;
+}
+
 .archive-console {
   grid-template-columns: minmax(180px, 0.7fr) minmax(220px, 1fr) auto minmax(220px, 1fr);
 }
@@ -521,6 +598,61 @@ p {
 
 .guideline-field textarea {
   min-height: 118px;
+}
+
+.guideline-insert {
+  align-items: center;
+  display: flex;
+  justify-content: flex-start;
+  padding: 10px 12px;
+}
+
+.reference-frame {
+  border: 1px solid var(--line);
+}
+
+.reference-frame > header {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 12px;
+}
+
+.reference-table {
+  display: grid;
+}
+
+.reference-row {
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 42px minmax(210px, 0.8fr) minmax(320px, 1.5fr) auto;
+  padding: 10px 12px;
+}
+
+.reference-row:last-child {
+  border-bottom: 0;
+}
+
+.reference-row > strong {
+  color: var(--accent);
+  font-size: 14px;
+}
+
+.reference-meta-fields {
+  display: grid;
+  gap: 6px;
+}
+
+.reference-row textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+
+.reference-empty {
+  font-size: 14px;
+  padding: 12px;
 }
 
 .knowledge-grid {
@@ -808,7 +940,9 @@ p {
   }
 
   .guideline-row,
+  .guideline-topline,
   .knowledge-grid,
+  .reference-row,
   .review-grid,
   .grid.two,
   .grid.three,

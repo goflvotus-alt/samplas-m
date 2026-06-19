@@ -212,8 +212,9 @@ function buildPromptText(
   brands: BrandEntry[],
   feedback: FeedbackEntry[]
 ): string {
-  const activeGuidelines = formatGuidelinesForPrompt(guidelines) || "None";
   const selectedBrandNames = input.pages.map((page) => page.category).filter(Boolean);
+  const selectedGuidelineCategories = input.pages.map((page) => page.category || page.format).filter(Boolean);
+  const activeGuidelines = formatGuidelinesForPrompt(guidelines, selectedGuidelineCategories) || "None";
   const brandKnowledge = formatBrandsForPrompt(brands, selectedBrandNames);
   const usefulFeedback = formatUsefulFeedbackForPrompt(feedback);
 

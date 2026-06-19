@@ -1,29 +1,27 @@
 [
   {
     "version": "2026-06-18T00:00:00.000Z",
-    "timestamp": "2026-06-18T00:00:00.000Z",
     "updatedBy": "admin",
-    "previousGuidelines": {
-      "brandTone": [],
-      "contentStructures": [],
-      "bannedExpressions": [],
-      "goodExamples": [],
-      "badExamples": [],
-      "imageRules": [],
-      "ctaRules": [],
-      "hashtagRules": []
-    },
-    "nextGuidelines": {
-      "brandTone": [
-        "Editorial, precise, and calm."
-      ],
-      "contentStructures": [],
-      "bannedExpressions": [],
-      "goodExamples": [],
-      "badExamples": [],
-      "imageRules": [],
-      "ctaRules": [],
-      "hashtagRules": []
+    "guidelines": {
+      "version": 2,
+      "activeCategoryId": "category",
+      "categories": [
+        {
+          "id": "category",
+          "name": "Category",
+          "rules": {
+            "brandTone": [
+              "Editorial, precise, and calm."
+            ],
+            "contentStructures": [],
+            "bannedExpressions": [],
+            "goodExamples": [],
+            "badExamples": [],
+            "imageRules": []
+          },
+          "references": []
+        }
+      ]
     }
   }
 ]

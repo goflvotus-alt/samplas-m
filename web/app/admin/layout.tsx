@@ -31,6 +31,7 @@ export default async function AdminLayout({
       <aside className="sidebar">
         <div className="brand-mark">
           <img className="brand-logo" src="/samplas-logo.png" alt="SAMPLAS" />
+          <span className="brand-byline">by Jonghyun Je</span>
           <div className="brand-subtitle">Editorial Intelligence System</div>
         </div>
         <nav className="nav-list" aria-label="Admin navigation">

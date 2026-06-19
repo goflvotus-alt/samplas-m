@@ -112,7 +112,8 @@ function getAvailableFormats(templatePage) {
         return {
           value: "",
           label: "Default",
-          templateName: template.name
+          templateName: template.name,
+          imageAspectRatio: getTemplateImageAspectRatio(template)
         };
       }
 
@@ -120,7 +121,8 @@ function getAvailableFormats(templatePage) {
       return {
         value: suffix.toLowerCase(),
         label: toTitleLabel(suffix),
-        templateName: template.name
+        templateName: template.name,
+        imageAspectRatio: getTemplateImageAspectRatio(template)
       };
     })
     .sort((a, b) => {
@@ -128,6 +130,16 @@ function getAvailableFormats(templatePage) {
       if (b.value === "") return 1;
       return a.label.localeCompare(b.label);
     });
+}
+
+function getTemplateImageAspectRatio(template) {
+  const imageLayer = template.findOne((node) => node.name === IMAGE_LAYER);
+
+  if (imageLayer && isSceneNode(imageLayer) && hasSize(imageLayer) && imageLayer.width > 0 && imageLayer.height > 0) {
+    return imageLayer.width / imageLayer.height;
+  }
+
+  return 1;
 }
 
 async function generateCards(cards, sharedImageBytes) {

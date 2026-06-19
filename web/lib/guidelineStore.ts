@@ -1,17 +1,39 @@
 import sampleGuidelines from "@/data/guidelines.sample.json";
 import { isRedisConfigured, redisCommand, redisPipeline, type StorageStatus } from "@/lib/redisStore";
 
-export type GuidelineKey =
+export type GuidelineRuleKey =
   | "brandTone"
   | "contentStructures"
   | "bannedExpressions"
   | "goodExamples"
   | "badExamples"
-  | "imageRules"
-  | "ctaRules"
-  | "hashtagRules";
+  | "imageRules";
 
-export type Guidelines = Record<GuidelineKey, string[]>;
+export type GuidelineKey = GuidelineRuleKey | "references";
+
+export type RuleMap = Record<GuidelineRuleKey, string[]>;
+
+export interface ReferenceEntry {
+  id: string;
+  title: string;
+  url: string;
+  note: string;
+}
+
+export interface GuidelineCategory {
+  id: string;
+  name: string;
+  rules: RuleMap;
+  references: ReferenceEntry[];
+}
+
+export interface GuidelineSystem {
+  version: 2;
+  activeCategoryId: string;
+  categories: GuidelineCategory[];
+}
+
+export type Guidelines = GuidelineSystem;
 
 export interface GuidelineHistoryEntry {
   version: string;
@@ -21,11 +43,14 @@ export interface GuidelineHistoryEntry {
 
 const GUIDELINES_KEY = "samplas-m:guidelines:active";
 const GUIDELINE_HISTORY_KEY = "samplas-m:guidelines:history";
+const MAX_CATEGORIES = 40;
 const MAX_RULES_PER_CATEGORY = 80;
 const MAX_RULE_LENGTH = 1000;
+const MAX_REFERENCES_PER_CATEGORY = 80;
+const MAX_REFERENCE_TEXT_LENGTH = 3000;
 const HISTORY_LIMIT = 50;
 
-export const GUIDELINE_SECTIONS: Array<{ key: GuidelineKey; label: string; description: string }> = [
+export const GUIDELINE_RULE_SECTIONS: Array<{ key: GuidelineRuleKey; label: string; description: string }> = [
   {
     key: "brandTone",
     label: "Brand Tone",
@@ -55,18 +80,22 @@ export const GUIDELINE_SECTIONS: Array<{ key: GuidelineKey; label: string; descr
     key: "imageRules",
     label: "Image Usage Rules",
     description: "이미지 설명, 크롭, 초점 관련 규칙"
-  },
-  {
-    key: "ctaRules",
-    label: "CTA Rules",
-    description: "콜투액션 사용 방식"
-  },
-  {
-    key: "hashtagRules",
-    label: "Hashtag Rules",
-    description: "해시태그 작성 방식"
   }
 ];
+
+export const GUIDELINE_SECTIONS: Array<{ key: GuidelineKey; label: string; description: string }> = [
+  ...GUIDELINE_RULE_SECTIONS,
+  {
+    key: "references",
+    label: "Reference",
+    description: "AI가 해당 콘텐츠 카테고리를 작성할 때 참고할 URL과 메모"
+  }
+];
+
+const emptyRuleMap = GUIDELINE_RULE_SECTIONS.reduce((rules, section) => {
+  rules[section.key] = [];
+  return rules;
+}, {} as RuleMap);
 
 export async function getGuidelines(): Promise<{ guidelines: Guidelines; storage: StorageStatus }> {
   if (!isRedisConfigured()) {
@@ -171,34 +200,176 @@ export async function getGuidelineHistory(): Promise<{ history: GuidelineHistory
 
 export function normalizeGuidelines(input: unknown): Guidelines {
   const source = asObject(input);
+  const rawCategories = Array.isArray(source.categories) ? source.categories : [];
+  const categories = rawCategories.length
+    ? normalizeCategories(rawCategories)
+    : [createCategory(String(source.activeCategory || source.categoryName || "Category"), normalizeRuleMap(source), [])];
+  const fallbackCategories = categories.length ? categories : [createCategory("Category", emptyRuleMap, [])];
+  const activeCategoryId = normalizeActiveCategoryId(source.activeCategoryId, fallbackCategories);
 
-  return GUIDELINE_SECTIONS.reduce((guidelines, section) => {
-    guidelines[section.key] = normalizeRuleList(source[section.key]);
-    return guidelines;
-  }, {} as Guidelines);
+  return {
+    version: 2,
+    activeCategoryId,
+    categories: fallbackCategories
+  };
 }
 
-export function formatGuidelinesForPrompt(guidelines: Guidelines): string {
-  return GUIDELINE_SECTIONS.map((section) => {
-    const rules = guidelines[section.key];
-    if (rules.length === 0) {
-      return "";
+export function formatGuidelinesForPrompt(guidelines: Guidelines, selectedCategoryNames: string[] = []): string {
+  const system = normalizeGuidelines(guidelines);
+  const categories = getRelevantCategories(system, selectedCategoryNames);
+
+  return categories
+    .map((category) => {
+      const ruleText = GUIDELINE_RULE_SECTIONS.map((section) => {
+        const rules = category.rules[section.key];
+        if (rules.length === 0) {
+          return "";
+        }
+
+        return [`${section.label}:`, ...rules.map((rule) => `- ${rule}`)].join("\n");
+      })
+        .filter(Boolean)
+        .join("\n\n");
+      const references = formatReferences(category.references);
+
+      return [
+        `Content Category: ${category.name}`,
+        ruleText,
+        references ? `References:\n${references}` : ""
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+    })
+    .filter(Boolean)
+    .join("\n\n---\n\n");
+}
+
+function normalizeCategories(input: unknown[]): GuidelineCategory[] {
+  const categories = input.map(normalizeCategory).filter((category) => category.name);
+  const seen = new Set<string>();
+  const uniqueCategories: GuidelineCategory[] = [];
+
+  for (const category of categories) {
+    const key = normalizeMatchKey(category.name);
+
+    if (seen.has(key)) {
+      continue;
     }
 
-    return [`${section.label}:`, ...rules.map((rule) => `- ${rule}`)].join("\n");
-  })
-    .filter(Boolean)
-    .join("\n\n");
+    seen.add(key);
+    uniqueCategories.push(category);
+  }
+
+  return uniqueCategories.slice(0, MAX_CATEGORIES);
+}
+
+function normalizeCategory(input: unknown): GuidelineCategory {
+  const source = asObject(input);
+  const name = normalizeText(source.name || source.categoryName || "Category", 80) || "Category";
+  const id = normalizeText(source.id, 120) || toCategoryId(name);
+  const rules = normalizeRuleMap(source.rules || source);
+  const references = normalizeReferences(source.references);
+
+  return {
+    id,
+    name,
+    rules,
+    references
+  };
+}
+
+function createCategory(name: string, rules: RuleMap, references: ReferenceEntry[]): GuidelineCategory {
+  const categoryName = normalizeText(name, 80) || "Category";
+
+  return {
+    id: toCategoryId(categoryName),
+    name: categoryName,
+    rules: normalizeRuleMap(rules),
+    references: normalizeReferences(references)
+  };
+}
+
+function normalizeRuleMap(input: unknown): RuleMap {
+  const source = asObject(input);
+
+  return GUIDELINE_RULE_SECTIONS.reduce((rules, section) => {
+    rules[section.key] = normalizeRuleList(source[section.key]);
+    return rules;
+  }, {} as RuleMap);
+}
+
+function normalizeReferences(input: unknown): ReferenceEntry[] {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input
+    .map((item, index) => {
+      const source = asObject(item);
+      const title = normalizeText(source.title, 180);
+      const url = normalizeText(source.url, 500);
+      const note = normalizeText(source.note || source.text || source.body, MAX_REFERENCE_TEXT_LENGTH);
+
+      if (!title && !url && !note) {
+        return null;
+      }
+
+      return {
+        id: normalizeText(source.id, 120) || `reference-${index + 1}`,
+        title,
+        url,
+        note
+      };
+    })
+    .filter((item): item is ReferenceEntry => Boolean(item))
+    .slice(0, MAX_REFERENCES_PER_CATEGORY);
 }
 
 function normalizeRuleList(value: unknown): string[] {
   const rawValues = Array.isArray(value) ? value : typeof value === "string" ? value.split("\n") : [];
   const rules = rawValues
-    .map((rule) => String(rule).trim())
-    .filter(Boolean)
-    .map((rule) => rule.slice(0, MAX_RULE_LENGTH));
+    .map((rule) => normalizeText(rule, MAX_RULE_LENGTH))
+    .filter(Boolean);
 
   return Array.from(new Set(rules)).slice(0, MAX_RULES_PER_CATEGORY);
+}
+
+function normalizeActiveCategoryId(value: unknown, categories: GuidelineCategory[]): string {
+  const activeId = normalizeText(value, 120);
+
+  if (activeId && categories.some((category) => category.id === activeId)) {
+    return activeId;
+  }
+
+  return categories[0]?.id || "category";
+}
+
+function getRelevantCategories(system: GuidelineSystem, selectedCategoryNames: string[]): GuidelineCategory[] {
+  const selectedKeys = new Set(selectedCategoryNames.map(normalizeMatchKey).filter(Boolean));
+
+  if (selectedKeys.size === 0) {
+    const activeCategory = system.categories.find((category) => category.id === system.activeCategoryId) || system.categories[0];
+    return activeCategory ? [activeCategory] : [];
+  }
+
+  const matched = system.categories.filter((category) => selectedKeys.has(normalizeMatchKey(category.name)));
+  const fallback = system.categories.find((category) => category.id === system.activeCategoryId) || system.categories[0];
+
+  return matched.length ? matched : fallback ? [fallback] : [];
+}
+
+function formatReferences(references: ReferenceEntry[]): string {
+  return references
+    .map((reference, index) => {
+      const lines = [
+        `${index + 1}. ${reference.title || "Untitled reference"}`,
+        reference.url ? `URL: ${reference.url}` : "",
+        reference.note ? `Note: ${reference.note}` : ""
+      ].filter(Boolean);
+
+      return lines.join("\n");
+    })
+    .join("\n\n");
 }
 
 function parseHistoryEntry(value: string): GuidelineHistoryEntry | null {
@@ -219,6 +390,29 @@ function parseHistoryEntry(value: string): GuidelineHistoryEntry | null {
   } catch {
     return null;
   }
+}
+
+function normalizeText(value: unknown, maxLength: number): string {
+  return String(value || "").trim().slice(0, maxLength);
+}
+
+function toCategoryId(name: string): string {
+  const normalized = name
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]+/g, "-")
+    .replace(/[^a-z0-9가-힣-]+/gi, "")
+    .replace(/^-+|-+$/g, "");
+
+  return normalized || "category";
+}
+
+function normalizeMatchKey(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, "")
+    .replace(/[^a-z0-9가-힣]+/gi, "");
 }
 
 function asObject(value: unknown): Record<string, unknown> {

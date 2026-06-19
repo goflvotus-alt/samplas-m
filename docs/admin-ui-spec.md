@@ -54,11 +54,12 @@ Route:
 
 Layout:
 
-- Two-column layout.
-- Left column: guideline category list.
-- Right column: editable active rules.
+- Compact operating status row.
+- Left-side content category switcher, matching the category values used by the Figma plugin.
+- Main editorial workspace showing every rule section for the selected content category.
+- Separate reference table view opened from the Reference row.
 
-Categories:
+Rule sections per content category:
 
 - Brand Tone
 - Content Structure Types
@@ -66,19 +67,21 @@ Categories:
 - Good Examples
 - Bad Examples
 - Image Usage Rules
-- CTA Rules
-- Hashtag Rules
+- Reference
 
 Controls:
 
 - Save
 - Reload
 - Restore Previous Version
+- Add Content Category
+- Insert Reference
 
 Behavior:
 
-- Selecting a category shows its current rules.
+- Selecting a content category shows the rules and references for that category.
 - Rules can be edited as one item per line or as structured cards later.
+- Reference entries contain a descending row number, editable title, URL, and note.
 - Save creates a guideline-history entry.
 - Restore Previous Version loads a prior snapshot.
 

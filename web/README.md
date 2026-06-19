@@ -81,7 +81,7 @@ Not implemented yet:
 
 ## Editable Guidelines
 
-`/admin/guidelines` can save active rules when Redis storage is configured.
+`/admin/guidelines` can save content-category guidelines and references when Redis storage is configured.
 
 Required Vercel environment variables:
 

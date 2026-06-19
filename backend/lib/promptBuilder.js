@@ -26,21 +26,59 @@ function buildPromptContext({
 }
 
 function formatGuidelines(guidelines) {
+  if (Array.isArray(guidelines.categories)) {
+    return guidelines.categories
+      .map((category) => {
+        const rules = category.rules || {};
+        const sections = [
+          ["Brand Tone", rules.brandTone],
+          ["Content Structures", rules.contentStructures],
+          ["Banned Expressions", rules.bannedExpressions],
+          ["Good Examples", rules.goodExamples],
+          ["Bad Examples", rules.badExamples],
+          ["Image Rules", rules.imageRules],
+          ["References", formatReferences(category.references)]
+        ];
+
+        return [`## Content Category: ${category.name || "Category"}`, ...sections.map(([title, values]) => formatSection(title, values)).filter(Boolean)]
+          .filter(Boolean)
+          .join("\n\n");
+      })
+      .filter(Boolean)
+      .join("\n\n---\n\n");
+  }
+
   const sections = [
     ["Brand Tone", guidelines.brandTone],
     ["Content Structures", guidelines.contentStructures],
     ["Banned Expressions", guidelines.bannedExpressions],
     ["Good Examples", guidelines.goodExamples],
     ["Bad Examples", guidelines.badExamples],
-    ["Image Rules", guidelines.imageRules],
-    ["CTA Rules", guidelines.ctaRules],
-    ["Hashtag Rules", guidelines.hashtagRules]
+    ["Image Rules", guidelines.imageRules]
   ];
 
   return sections
     .map(([title, values]) => formatSection(title, values))
     .filter(Boolean)
     .join("\n\n");
+}
+
+function formatReferences(references) {
+  if (!Array.isArray(references)) {
+    return [];
+  }
+
+  return references
+    .map((reference, index) =>
+      [
+        `${index + 1}. ${reference.title || "Untitled reference"}`,
+        reference.url ? `URL: ${reference.url}` : "",
+        reference.note ? `Note: ${reference.note}` : ""
+      ]
+        .filter(Boolean)
+        .join("\n")
+    )
+    .filter(Boolean);
 }
 
 function formatBrands(brands) {
