@@ -31,16 +31,19 @@ export async function assertAdminPassword(request: Request): Promise<void> {
 
 export async function verifyAdminPassword(providedPassword: string): Promise<void> {
   const storedPasswordRecord = await getStoredPasswordRecord();
+  const fallbackPassword = process.env.ADMIN_PASSWORD || "";
 
   if (storedPasswordRecord) {
     if (verifyPasswordRecord(providedPassword, storedPasswordRecord)) {
       return;
     }
 
+    if (fallbackPassword && safeStringEquals(providedPassword, fallbackPassword)) {
+      return;
+    }
+
     throw new ApiError(401, "Admin password is incorrect.");
   }
-
-  const fallbackPassword = process.env.ADMIN_PASSWORD || "";
 
   if (!fallbackPassword) {
     throw new ApiError(500, "ADMIN_PASSWORD is missing. Add it in Vercel Project Settings > Environment Variables.");

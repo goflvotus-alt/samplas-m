@@ -85,7 +85,7 @@ export default function SettingsPanel(): ReactElement {
         <h2>Admin Password</h2>
         <p>
           로그인 세션으로 관리자 권한을 확인합니다. Redis 저장소가 연결되어 있으면 여기서 새 비밀번호로 바꿀 수
-          있습니다.
+          있습니다. Vercel의 ADMIN_PASSWORD는 비밀번호를 잊었을 때 복구용으로도 사용할 수 있습니다.
         </p>
 
         <div className="status-list section">

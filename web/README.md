@@ -117,4 +117,4 @@ Saved brand data and useful feedback are included in future `POST /api/generate-
 Users log in once at `/login`. The browser receives an HTTP-only admin session cookie, so `/admin/guidelines`,
 `/admin/brands`, `/admin/feedback`, `/admin/test`, and `/admin/settings` do not ask for the password again during the session.
 
-When Redis storage is configured, `/admin/settings` can save a new admin password. After a custom password is saved, that password is hashed in Redis and becomes the active admin password for future logins.
+When Redis storage is configured, `/admin/settings` can save a new admin password. After a custom password is saved, that password is hashed in Redis and becomes the active admin password for future logins. The Vercel `ADMIN_PASSWORD` environment variable remains valid as an emergency recovery password.

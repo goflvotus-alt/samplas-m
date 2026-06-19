@@ -236,7 +236,7 @@ The admin site uses `/login` for a persistent browser session. Saved guidelines 
 
 The first admin password comes from the Vercel `ADMIN_PASSWORD` environment variable.
 
-When Redis storage is connected, `/admin/settings` can save a new admin password. The saved password is hashed in Redis and becomes the active admin password for future logins.
+When Redis storage is connected, `/admin/settings` can save a new admin password. The saved password is hashed in Redis and becomes the active admin password for future logins. The Vercel `ADMIN_PASSWORD` environment variable remains valid as an emergency recovery password.
 
 ### Editable Brands And Feedback
 
