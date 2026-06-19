@@ -26,7 +26,6 @@ export default function BrandsEditor(): ReactElement {
   const [selectedName, setSelectedName] = useState("");
   const [draft, setDraft] = useState<BrandEntry>(emptyBrand);
   const [search, setSearch] = useState("");
-  const [adminPassword, setAdminPassword] = useState("");
   const [storage, setStorage] = useState("unknown");
   const [status, setStatus] = useState("Loading brands...");
   const [saving, setSaving] = useState(false);
@@ -39,7 +38,7 @@ export default function BrandsEditor(): ReactElement {
     }
 
     return brands.filter((brand) =>
-      [brand.brandName, brand.designer, brand.description, ...brand.keywords]
+      [brand.brandName, brand.designer, brand.description, ...brand.keywords, ...brand.comparableBrands, ...brand.notes]
         .join(" ")
         .toLowerCase()
         .includes(query)
@@ -47,8 +46,6 @@ export default function BrandsEditor(): ReactElement {
   }, [brands, search]);
 
   useEffect(() => {
-    const storedPassword = window.sessionStorage.getItem("samplas-admin-password") || "";
-    setAdminPassword(storedPassword);
     void loadBrands();
   }, []);
 
@@ -76,7 +73,6 @@ export default function BrandsEditor(): ReactElement {
   async function saveBrand(): Promise<void> {
     setSaving(true);
     setStatus("Saving brand...");
-    window.sessionStorage.setItem("samplas-admin-password", adminPassword);
 
     try {
       const method = selectedName ? "PUT" : "POST";
@@ -84,16 +80,21 @@ export default function BrandsEditor(): ReactElement {
       const response = await fetch(endpoint, {
         method,
         headers: {
-          "Content-Type": "application/json",
-          "x-admin-password": adminPassword
+          "Content-Type": "application/json"
         },
-        body: JSON.stringify(draft)
+        body: JSON.stringify(draft),
+        credentials: "same-origin"
       });
 
       const json = (await response.json()) as { brands?: BrandEntry[]; error?: string };
 
       if (!response.ok) {
         setStatus(json.error || "Could not save brand.");
+
+        if (response.status === 401) {
+          window.location.href = "/login";
+        }
+
         return;
       }
 
@@ -120,20 +121,22 @@ export default function BrandsEditor(): ReactElement {
 
     setSaving(true);
     setStatus("Deleting brand...");
-    window.sessionStorage.setItem("samplas-admin-password", adminPassword);
 
     try {
       const response = await fetch(`/api/brands/${encodeURIComponent(selectedName)}`, {
         method: "DELETE",
-        headers: {
-          "x-admin-password": adminPassword
-        }
+        credentials: "same-origin"
       });
 
       const json = (await response.json()) as { brands?: BrandEntry[]; error?: string };
 
       if (!response.ok) {
         setStatus(json.error || "Could not delete brand.");
+
+        if (response.status === 401) {
+          window.location.href = "/login";
+        }
+
         return;
       }
 
@@ -173,91 +176,94 @@ export default function BrandsEditor(): ReactElement {
   }
 
   return (
-    <div className="grid two">
-      <section className="card">
-        <div className="button-row split-row">
-          <h2>Brand List</h2>
-          <span className="badge">{brands.length} brands</span>
-        </div>
-
-        <div className="field section">
-          <label htmlFor="brandSearch">Search</label>
-          <input id="brandSearch" value={search} onChange={(event) => setSearch(event.target.value)} />
-        </div>
-
-        <div className="entity-list section">
-          {filteredBrands.map((brand) => (
-            <button
-              className={`entity-button${brand.brandName === selectedName ? " active" : ""}`}
-              key={brand.brandName}
-              onClick={() => selectBrand(brand)}
-              type="button"
-            >
-              <strong>{brand.brandName}</strong>
-              <span>{brand.designer || "Designer not set"}</span>
-            </button>
-          ))}
-        </div>
-
-        <section className="section notice">Storage: {storage}</section>
+    <div className="knowledge-layout">
+      <section className="system-strip" aria-label="Brand status">
+        <StatusItem label="Storage" value={storage} />
+        <StatusItem label="Brands" value={String(brands.length)} />
+        <StatusItem label="Visible" value={String(filteredBrands.length)} />
+        <StatusItem label="Selected" value={selectedName || "-"} />
       </section>
 
-      <section className="card">
-        <div className="form-grid">
+      <div className="knowledge-grid">
+        <section className="knowledge-index">
           <div className="button-row split-row">
-            <h2>{selectedName ? "Edit Brand" : "Add Brand"}</h2>
+            <div>
+              <p className="eyebrow">Brand Knowledge Base</p>
+              <h2>브랜드 인덱스</h2>
+            </div>
             <button className="button secondary" disabled={saving} onClick={createNewBrand} type="button">
               New
             </button>
           </div>
 
-          <div className="field">
-            <label htmlFor="brandName">Brand Name</label>
-            <input id="brandName" value={draft.brandName} onChange={(event) => updateDraft("brandName", event.target.value)} />
+          <div className="field section">
+            <label htmlFor="brandSearch">Search</label>
+            <input id="brandSearch" value={search} onChange={(event) => setSearch(event.target.value)} />
           </div>
 
-          <div className="field">
-            <label htmlFor="designer">Designer</label>
-            <input id="designer" value={draft.designer} onChange={(event) => updateDraft("designer", event.target.value)} />
+          <div className="entity-list section">
+            {filteredBrands.map((brand) => (
+              <button
+                className={`entity-button${brand.brandName === selectedName ? " active" : ""}`}
+                key={brand.brandName}
+                onClick={() => selectBrand(brand)}
+                type="button"
+              >
+                <strong>{brand.brandName}</strong>
+                <span>{brand.keywords.slice(0, 4).join(", ") || brand.designer || "No keywords"}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="knowledge-editor">
+          <div className="button-row split-row">
+            <div>
+              <p className="eyebrow">{selectedName ? "Editing Brand" : "New Brand"}</p>
+              <h2>{draft.brandName || "Untitled Brand"}</h2>
+            </div>
+            <span className="badge">{status}</span>
           </div>
 
-          <div className="field">
-            <label htmlFor="keywords">Keywords</label>
-            <textarea id="keywords" value={draft.keywords.join("\n")} onChange={(event) => updateDraft("keywords", event.target.value)} />
+          <div className="editorial-form">
+            <div className="field">
+              <label htmlFor="brandName">Brand Name</label>
+              <input id="brandName" value={draft.brandName} onChange={(event) => updateDraft("brandName", event.target.value)} />
+            </div>
+
+            <div className="field">
+              <label htmlFor="designer">Designer</label>
+              <input id="designer" value={draft.designer} onChange={(event) => updateDraft("designer", event.target.value)} />
+            </div>
+
+            <div className="field field-wide">
+              <label htmlFor="description">Description</label>
+              <textarea id="description" value={draft.description} onChange={(event) => updateDraft("description", event.target.value)} />
+            </div>
+
+            <div className="field">
+              <label htmlFor="keywords">Keywords</label>
+              <textarea id="keywords" value={draft.keywords.join("\n")} onChange={(event) => updateDraft("keywords", event.target.value)} />
+            </div>
+
+            <div className="field">
+              <label htmlFor="comparableBrands">Comparable Brands</label>
+              <textarea
+                id="comparableBrands"
+                value={draft.comparableBrands.join("\n")}
+                onChange={(event) => updateDraft("comparableBrands", event.target.value)}
+              />
+            </div>
+
+            <div className="field field-wide">
+              <label htmlFor="notes">Notes</label>
+              <textarea id="notes" value={draft.notes.join("\n")} onChange={(event) => updateDraft("notes", event.target.value)} />
+            </div>
           </div>
 
-          <div className="field">
-            <label htmlFor="description">Description</label>
-            <textarea id="description" value={draft.description} onChange={(event) => updateDraft("description", event.target.value)} />
-          </div>
-
-          <div className="field">
-            <label htmlFor="comparableBrands">Comparable Brands</label>
-            <textarea
-              id="comparableBrands"
-              value={draft.comparableBrands.join("\n")}
-              onChange={(event) => updateDraft("comparableBrands", event.target.value)}
-            />
-          </div>
-
-          <div className="field">
-            <label htmlFor="notes">Notes</label>
-            <textarea id="notes" value={draft.notes.join("\n")} onChange={(event) => updateDraft("notes", event.target.value)} />
-          </div>
-
-          <div className="field">
-            <label htmlFor="adminPassword">Admin Password</label>
-            <input
-              id="adminPassword"
-              type="password"
-              value={adminPassword}
-              onChange={(event) => setAdminPassword(event.target.value)}
-            />
-          </div>
-
-          <div className="button-row">
+          <div className="button-row section">
             <button className="button" disabled={saving || !draft.brandName} onClick={saveBrand} type="button">
-              Save
+              Save Brand
             </button>
             <button className="button secondary" disabled={saving || !selectedName} onClick={deleteSelectedBrand} type="button">
               Delete
@@ -266,10 +272,17 @@ export default function BrandsEditor(): ReactElement {
               Reload
             </button>
           </div>
+        </section>
+      </div>
+    </div>
+  );
+}
 
-          {status ? <p>{status}</p> : null}
-        </div>
-      </section>
+function StatusItem({ label, value }: { label: string; value: string }): ReactElement {
+  return (
+    <div>
+      <span>{label}</span>
+      <strong>{value}</strong>
     </div>
   );
 }

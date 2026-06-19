@@ -6,10 +6,10 @@ export default function FeedbackPage(): ReactElement {
     <>
       <header className="page-header">
         <div>
-          <p className="eyebrow">Feedback</p>
-          <h1>피드백 관리</h1>
+          <p className="eyebrow">Feedback Intelligence</p>
+          <h1>피드백 검토</h1>
         </div>
-        <span className="badge">Editable</span>
+        <span className="badge">Learning Loop</span>
       </header>
 
       <FeedbackManager />

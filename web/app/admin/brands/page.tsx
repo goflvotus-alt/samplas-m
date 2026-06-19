@@ -6,10 +6,10 @@ export default function BrandsPage(): ReactElement {
     <>
       <header className="page-header">
         <div>
-          <p className="eyebrow">Brands</p>
-          <h1>브랜드 관리</h1>
+          <p className="eyebrow">Brand Knowledge Base</p>
+          <h1>브랜드 지식</h1>
         </div>
-        <span className="badge">Editable</span>
+        <span className="badge">Knowledge System</span>
       </header>
 
       <BrandsEditor />

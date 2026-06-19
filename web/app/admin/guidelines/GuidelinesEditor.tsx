@@ -15,7 +15,7 @@ type GuidelineKey =
 
 type Guidelines = Record<GuidelineKey, string[]>;
 type GuidelineDrafts = Record<GuidelineKey, string>;
-type SaveState = "idle" | "saving" | "saved" | "error";
+type SaveState = "idle" | "dirty" | "saving" | "saved" | "error";
 
 type HistoryEntry = {
   version: string;
@@ -73,25 +73,21 @@ const emptyDrafts = sections.reduce((drafts, section) => {
 
 export default function GuidelinesEditor(): ReactElement {
   const [drafts, setDrafts] = useState<GuidelineDrafts>(emptyDrafts);
-  const [selectedKey, setSelectedKey] = useState<GuidelineKey>("brandTone");
-  const [adminPassword, setAdminPassword] = useState("");
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [selectedVersion, setSelectedVersion] = useState("");
   const [status, setStatus] = useState("Loading guidelines...");
   const [storage, setStorage] = useState("unknown");
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [brandCount, setBrandCount] = useState(0);
+  const [feedbackCount, setFeedbackCount] = useState(0);
+  const [lastSavedAt, setLastSavedAt] = useState("");
 
-  const selectedSection = useMemo(
-    () => sections.find((section) => section.key === selectedKey) || sections[0],
-    [selectedKey]
+  const totalRules = useMemo(
+    () => sections.reduce((count, section) => count + toRules(drafts[section.key]).length, 0),
+    [drafts]
   );
 
-  const selectedText = drafts[selectedKey];
-  const totalRules = sections.reduce((count, section) => count + toRules(drafts[section.key]).length, 0);
-
   useEffect(() => {
-    const storedPassword = window.sessionStorage.getItem("samplas-admin-password") || "";
-    setAdminPassword(storedPassword);
     void reloadAll();
   }, []);
 
@@ -99,33 +95,34 @@ export default function GuidelinesEditor(): ReactElement {
     setStatus("Loading guidelines...");
 
     try {
-      const guidelineResponse = await fetch("/api/guidelines", { cache: "no-store" });
+      const [guidelineResponse, brandsResponse, feedbackResponse] = await Promise.all([
+        fetch("/api/guidelines", { cache: "no-store" }),
+        fetch("/api/brands", { cache: "no-store" }),
+        fetch("/api/feedback", { cache: "no-store" })
+      ]);
       const nextGuidelines = normalizeGuidelines(await guidelineResponse.json());
+      const brandsJson = await brandsResponse.json();
+      const feedbackJson = await feedbackResponse.json();
 
       setDrafts(guidelinesToDrafts(nextGuidelines));
       setStorage(guidelineResponse.headers.get("X-Samplas-Storage") || "unknown");
+      setBrandCount(Array.isArray(brandsJson) ? brandsJson.length : 0);
+      setFeedbackCount(Array.isArray(feedbackJson) ? feedbackJson.length : 0);
       setSelectedVersion("");
+      setSaveState("idle");
       setStatus(guidelineResponse.ok ? "Loaded." : "Could not load guidelines.");
       await reloadHistorySafely();
     } catch (error) {
       console.error("[guidelines] Reload failed", error);
       setStatus(error instanceof Error ? error.message : "Could not load guidelines.");
+      setSaveState("error");
     }
   }
 
   async function save(): Promise<void> {
-    if (!adminPassword.trim()) {
-      const message = "Admin Password를 입력해야 저장됩니다.";
-      console.error("[guidelines] Save blocked", { reason: "missing-admin-password" });
-      setStatus(message);
-      setSaveState("error");
-      return;
-    }
-
     const nextGuidelines = draftsToGuidelines(drafts);
     setSaveState("saving");
     setStatus("Saving guidelines...");
-    window.sessionStorage.setItem("samplas-admin-password", adminPassword);
 
     try {
       console.info("[guidelines] Sending save request", {
@@ -139,13 +136,13 @@ export default function GuidelinesEditor(): ReactElement {
       const response = await fetch("/api/guidelines", {
         method: "PUT",
         headers: {
-          "Content-Type": "application/json",
-          "x-admin-password": adminPassword
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           updatedBy: "admin",
           guidelines: nextGuidelines
-        })
+        }),
+        credentials: "same-origin"
       });
 
       const json = (await response.json()) as { ok?: boolean; error?: string; version?: string; guidelines?: Guidelines };
@@ -157,6 +154,11 @@ export default function GuidelinesEditor(): ReactElement {
         });
         setStatus(json.error || "Could not save guidelines.");
         setSaveState("error");
+
+        if (response.status === 401) {
+          window.location.href = "/login";
+        }
+
         return;
       }
 
@@ -166,15 +168,15 @@ export default function GuidelinesEditor(): ReactElement {
       }
 
       await reloadFromRedisAfterSave();
-      setStatus(json.version ? `Saved. Version: ${json.version}` : "Saved.");
+      const savedAt = json.version || new Date().toISOString();
+      setLastSavedAt(savedAt);
+      setStatus("Saved.");
       setSaveState("saved");
-      window.setTimeout(() => setSaveState("idle"), 2000);
+      window.setTimeout(() => setSaveState((current) => (current === "saved" ? "idle" : current)), 2000);
     } catch (error) {
       console.error("[guidelines] Save threw an error", error);
       setStatus(error instanceof Error ? error.message : "Could not save guidelines.");
       setSaveState("error");
-    } finally {
-      window.setTimeout(() => setSaveState((current) => (current === "saving" ? "idle" : current)), 300);
     }
   }
 
@@ -190,21 +192,21 @@ export default function GuidelinesEditor(): ReactElement {
   async function reloadHistorySafely(): Promise<void> {
     try {
       const response = await fetch("/api/guidelines/history", { cache: "no-store" });
-      setHistory(normalizeHistory(await response.json()));
+      const nextHistory = normalizeHistory(await response.json());
+      setHistory(nextHistory);
+      setLastSavedAt(nextHistory[0]?.version || "");
     } catch (error) {
       console.error("[guidelines] History reload failed", error);
     }
   }
 
-  function updateSelectedText(value: string): void {
-    if (saveState === "saved" || saveState === "error") {
-      setSaveState("idle");
-    }
-
+  function updateDraft(key: GuidelineKey, value: string): void {
     setDrafts((current) => ({
       ...current,
-      [selectedKey]: value
+      [key]: value
     }));
+    setSaveState("dirty");
+    setStatus("Unsaved changes.");
   }
 
   function restoreSelectedVersion(): void {
@@ -217,97 +219,93 @@ export default function GuidelinesEditor(): ReactElement {
 
     const restoredGuidelines = normalizeGuidelines(entry.guidelines);
     setDrafts(guidelinesToDrafts(restoredGuidelines));
+    setSaveState("dirty");
     setStatus("Previous version loaded into the editor. Click Save to make it active.");
   }
 
   const saveButtonClassName = `button save-button${saveState === "saved" ? " saved" : ""}${saveState === "error" ? " error" : ""}`;
-  const saveButtonLabel = saveState === "saved" ? "✓ Saved" : saveState === "saving" ? "Saving..." : "Save";
+  const saveButtonLabel = saveState === "saved" ? "✓ Saved" : saveState === "saving" ? "Saving..." : "Save System";
+  const statusLabel =
+    saveState === "dirty" ? "Unsaved Changes" : saveState === "saving" ? "Saving..." : saveState === "saved" ? "Saved" : status;
 
   return (
-    <div className="grid two">
-      <section className="card">
-        <div className="button-row" style={{ justifyContent: "space-between", marginBottom: 14 }}>
-          <h2>Guideline Category</h2>
-          <span className="badge">{totalRules} rules</span>
-        </div>
-
-        <div className="category-list">
-          {sections.map((section) => (
-            <button
-              className={`category-button${section.key === selectedKey ? " active" : ""}`}
-              key={section.key}
-              onClick={() => setSelectedKey(section.key)}
-              type="button"
-            >
-              <span>{section.label}</span>
-              <small>{toRules(drafts[section.key]).length} rules</small>
-            </button>
-          ))}
-        </div>
-
-        <section className="section notice">
-          Storage: {storage}
-          <br />
-          저장이 안 되면 Vercel 환경변수에 UPSTASH_REDIS_REST_URL과 UPSTASH_REDIS_REST_TOKEN을 추가해야 합니다.
-        </section>
+    <div className="editorial-workspace">
+      <section className="system-strip" aria-label="Operational status">
+        <StatusItem label="Storage" value={storage} />
+        <StatusItem label="Guidelines" value={String(totalRules)} />
+        <StatusItem label="Brands" value={String(brandCount)} />
+        <StatusItem label="Feedback Entries" value={String(feedbackCount)} />
+        <StatusItem label="Last Updated" value={formatDateTime(lastSavedAt)} />
       </section>
 
-      <section className="card">
-        <div className="form-grid">
-          <div>
-            <h2>{selectedSection.label}</h2>
-            <p>{selectedSection.description}</p>
-          </div>
-
-          <div className="field">
-            <label htmlFor="rules">Current Active Rules</label>
-            <textarea
-              id="rules"
-              spellCheck={false}
-              value={selectedText}
-              onChange={(event) => updateSelectedText(event.target.value)}
-            />
-            <p>한 줄에 규칙 하나씩 입력합니다.</p>
-          </div>
-
-          <div className="field">
-            <label htmlFor="adminPassword">Admin Password</label>
-            <input
-              id="adminPassword"
-              type="password"
-              value={adminPassword}
-              onChange={(event) => setAdminPassword(event.target.value)}
-            />
-          </div>
-
-          <div className="button-row">
-            <button className={saveButtonClassName} disabled={saveState === "saving"} onClick={save} type="button">
-              {saveButtonLabel}
-            </button>
-            <button className="button secondary" disabled={saveState === "saving"} onClick={reloadAll} type="button">
-              Reload
-            </button>
-          </div>
-
-          <div className="field">
-            <label htmlFor="history">Restore Previous Version</label>
-            <select id="history" value={selectedVersion} onChange={(event) => setSelectedVersion(event.target.value)}>
-              <option value="">Choose version</option>
-              {history.map((entry) => (
-                <option key={entry.version} value={entry.version}>
-                  {entry.version} by {entry.updatedBy}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <button className="button secondary" onClick={restoreSelectedVersion} type="button">
-            Restore Into Editor
+      <section className="save-console">
+        <div>
+          <p className="eyebrow">Save State</p>
+          <h2>{statusLabel}</h2>
+          <p>Last Saved: {formatDateTime(lastSavedAt)}</p>
+        </div>
+        <div className="button-row">
+          <button className={saveButtonClassName} disabled={saveState === "saving"} onClick={save} type="button">
+            {saveButtonLabel}
           </button>
-
-          {status ? <div className={`status-message ${saveState === "error" ? "error" : ""}`}>{status}</div> : null}
+          <button className="button secondary" disabled={saveState === "saving"} onClick={reloadAll} type="button">
+            Reload
+          </button>
         </div>
       </section>
+
+      <section className="guideline-board">
+        {sections.map((section, index) => (
+          <article className="guideline-row" key={section.key}>
+            <div className="guideline-index">{String(index + 1).padStart(2, "0")}</div>
+            <div className="guideline-meta">
+              <h2>{section.label}</h2>
+              <p>{section.description}</p>
+              <span>{toRules(drafts[section.key]).length} active rules</span>
+            </div>
+            <div className="field guideline-field">
+              <label htmlFor={section.key}>Current Rules</label>
+              <textarea
+                id={section.key}
+                spellCheck={false}
+                value={drafts[section.key]}
+                onChange={(event) => updateDraft(section.key, event.target.value)}
+              />
+            </div>
+          </article>
+        ))}
+      </section>
+
+      <section className="archive-console">
+        <div>
+          <p className="eyebrow">Version Archive</p>
+          <h2>Restore Previous Rules</h2>
+        </div>
+        <div className="field">
+          <label htmlFor="history">Previous Version</label>
+          <select id="history" value={selectedVersion} onChange={(event) => setSelectedVersion(event.target.value)}>
+            <option value="">Choose version</option>
+            {history.map((entry) => (
+              <option key={entry.version} value={entry.version}>
+                {entry.version} by {entry.updatedBy}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button className="button secondary" onClick={restoreSelectedVersion} type="button">
+          Restore Into Editor
+        </button>
+        {status ? <div className={`status-message ${saveState === "error" ? "error" : ""}`}>{status}</div> : null}
+      </section>
+    </div>
+  );
+}
+
+function StatusItem({ label, value }: { label: string; value: string }): ReactElement {
+  return (
+    <div>
+      <span>{label}</span>
+      <strong>{value}</strong>
     </div>
   );
 }
@@ -362,4 +360,24 @@ function draftsToGuidelines(drafts: GuidelineDrafts): Guidelines {
 
 function toRules(value: string): string[] {
   return Array.from(new Set(value.split("\n").map((rule) => rule.trim()).filter(Boolean)));
+}
+
+function formatDateTime(value: string): string {
+  if (!value || value === "sample") {
+    return "-";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleString("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
 }

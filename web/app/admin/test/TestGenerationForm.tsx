@@ -94,16 +94,25 @@ export default function TestGenerationForm(): ReactElement {
   }
 
   return (
-    <div className="grid two">
-      <section className="card">
-        <div className="form-grid">
-          <div className="field">
+    <div className="generation-room">
+      <section className="generation-input">
+        <div>
+          <p className="eyebrow">Creative Brief</p>
+          <h2>생성 조건</h2>
+        </div>
+
+        <div className="editorial-form">
+          <div className="field field-wide">
             <label htmlFor="topic">Topic</label>
             <input id="topic" value={topic} onChange={(event) => setTopic(event.target.value)} />
           </div>
           <div className="field">
             <label htmlFor="mood">Mood</label>
             <input id="mood" value={mood} onChange={(event) => setMood(event.target.value)} />
+          </div>
+          <div className="field">
+            <label htmlFor="brand">Brand</label>
+            <input id="brand" value={brand} onChange={(event) => setBrand(event.target.value)} />
           </div>
           <div className="field">
             <label htmlFor="format">Format</label>
@@ -126,60 +135,68 @@ export default function TestGenerationForm(): ReactElement {
               onChange={(event) => setSlideCount(Math.max(1, Math.min(10, Number(event.target.value) || 1)))}
             />
           </div>
-          <div className="field">
-            <label htmlFor="brand">Brand</label>
-            <input id="brand" value={brand} onChange={(event) => setBrand(event.target.value)} />
-          </div>
-          <div className="field">
+          <div className="field field-wide">
             <label htmlFor="draftText">Draft Text</label>
             <textarea id="draftText" value={draftText} onChange={(event) => setDraftText(event.target.value)} />
           </div>
-          <button className="button" disabled={loading} onClick={generate} type="button">
+        </div>
+
+        <div className="button-row section">
+          <button className="button editorial-button" disabled={loading} onClick={generate} type="button">
             Generate Test
           </button>
-          {status ? <p>{status}</p> : null}
+          {status ? <span className="badge">{status}</span> : null}
         </div>
       </section>
 
-      <section className="card">
-        <h2>Result</h2>
+      <section className="generation-output">
+        <div>
+          <p className="eyebrow">Editorial Preview</p>
+          <h2>생성 결과</h2>
+        </div>
+
         {result?.postCaption ? (
-          <section className="section">
+          <section className="preview-block">
             <h3>Post Caption</h3>
             <p>{result.postCaption}</p>
           </section>
         ) : null}
+
         {result?.cards ? (
-          <section className="section">
+          <section className="preview-block">
             <h3>Card List</h3>
-            <ul className="rule-list">
+            <div className="card-script">
               {result.cards.map((card, index) => (
-                <li key={`${card.title}-${index}`}>
-                  {index + 1}. {card.title}
-                </li>
+                <article key={`${card.title}-${index}`}>
+                  <span>{String(index + 1).padStart(2, "0")}</span>
+                  <div>
+                    <strong>{card.title}</strong>
+                    <p>{card.body}</p>
+                  </div>
+                </article>
               ))}
-            </ul>
+            </div>
           </section>
         ) : null}
-        <section className="section">
+
+        <section className="preview-block">
           <h3>Raw JSON</h3>
           <pre className="result-box">{result ? JSON.stringify(result, null, 2) : "No result yet."}</pre>
         </section>
-        <section className="section">
+
+        <section className="preview-block review-panel">
           <h3>생성 결과는 어땠나요?</h3>
-          <div className="form-grid">
-            <div className="field">
-              <label htmlFor="feedback">Feedback</label>
-              <textarea id="feedback" value={feedback} onChange={(event) => setFeedback(event.target.value)} />
-            </div>
-            <div className="button-row">
-              <button className="button secondary" disabled={!result || !feedback} onClick={saveFeedback} type="button">
-                Save Feedback
-              </button>
-              <button className="button secondary" disabled={loading} onClick={generate} type="button">
-                Regenerate With Feedback
-              </button>
-            </div>
+          <div className="field">
+            <label htmlFor="feedback">Feedback</label>
+            <textarea id="feedback" value={feedback} onChange={(event) => setFeedback(event.target.value)} />
+          </div>
+          <div className="button-row">
+            <button className="button secondary" disabled={!result || !feedback} onClick={saveFeedback} type="button">
+              Save Feedback
+            </button>
+            <button className="button secondary" disabled={loading} onClick={generate} type="button">
+              Regenerate With Feedback
+            </button>
           </div>
         </section>
       </section>

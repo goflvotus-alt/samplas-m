@@ -6,10 +6,10 @@ export default function SettingsPage(): ReactElement {
     <>
       <header className="page-header">
         <div>
-          <p className="eyebrow">Settings</p>
-          <h1>관리 설정</h1>
+          <p className="eyebrow">Access Control</p>
+          <h1>관리자 설정</h1>
         </div>
-        <span className="badge">Admin</span>
+        <span className="badge">Session Based</span>
       </header>
 
       <SettingsPanel />

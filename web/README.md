@@ -28,6 +28,7 @@ When importing this repository into Vercel:
 - Environment Variables:
   - `OPENAI_API_KEY`
   - `ADMIN_PASSWORD`
+  - `ADMIN_SESSION_SECRET` optional
   - `OPENAI_MODEL` optional
   - `OPENAI_REASONING_EFFORT` optional
   - `UPSTASH_REDIS_REST_URL` for editable guideline storage
@@ -56,6 +57,7 @@ Implemented:
 - `/admin/feedback` editable feedback manager
 - `/admin/test` generation test page
 - `/admin/settings` admin password settings
+- `/login` persistent admin session login
 - `GET /health`
 - `GET /api/health`
 - `POST /api/generate-card-news`
@@ -75,7 +77,6 @@ Implemented:
 
 Not implemented yet:
 
-- Persistent admin login
 - Full database migration beyond Redis
 
 ## Editable Guidelines
@@ -97,7 +98,7 @@ KV_REST_API_URL
 KV_REST_API_TOKEN
 ```
 
-The Save button sends the admin password only to the server API. The OpenAI API key and Redis token remain server-side.
+The Save button uses the server-side admin session. The OpenAI API key and Redis token remain server-side.
 
 Saved guidelines are included in future `POST /api/generate-card-news` prompts.
 
@@ -113,4 +114,7 @@ Saved brand data and useful feedback are included in future `POST /api/generate-
 
 `ADMIN_PASSWORD` remains the first fallback password.
 
-When Redis storage is configured, `/admin/settings` can save a new admin password. After a custom password is saved, that password is hashed in Redis and becomes the active admin password for guideline editing and settings changes.
+Users log in once at `/login`. The browser receives an HTTP-only admin session cookie, so `/admin/guidelines`,
+`/admin/brands`, `/admin/feedback`, `/admin/test`, and `/admin/settings` do not ask for the password again during the session.
+
+When Redis storage is configured, `/admin/settings` can save a new admin password. After a custom password is saved, that password is hashed in Redis and becomes the active admin password for future logins.

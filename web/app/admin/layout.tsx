@@ -1,4 +1,9 @@
 import type { ReactElement, ReactNode } from "react";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { ADMIN_SESSION_COOKIE, isValidAdminSessionCookieValue } from "@/lib/adminAuth";
+
+export const dynamic = "force-dynamic";
 
 const navItems = [
   { href: "/admin", label: "홈" },
@@ -9,17 +14,24 @@ const navItems = [
   { href: "/admin/settings", label: "설정" }
 ];
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children
 }: Readonly<{
   children: ReactNode;
-}>): ReactElement {
+}>): Promise<ReactElement> {
+  const cookieStore = await cookies();
+  const session = cookieStore.get(ADMIN_SESSION_COOKIE)?.value || "";
+
+  if (!isValidAdminSessionCookieValue(session)) {
+    redirect("/login");
+  }
+
   return (
     <div className="admin-shell">
       <aside className="sidebar">
         <div className="brand-mark">
           <img className="brand-logo" src="/samplas-logo.png" alt="SAMPLAS" />
-          <div className="brand-subtitle">AI card-news admin</div>
+          <div className="brand-subtitle">Editorial Intelligence System</div>
         </div>
         <nav className="nav-list" aria-label="Admin navigation">
           {navItems.map((item) => (
@@ -28,6 +40,11 @@ export default function AdminLayout({
             </a>
           ))}
         </nav>
+        <form action="/api/admin/logout" method="post">
+          <button className="nav-link logout-button" type="submit">
+            로그아웃
+          </button>
+        </form>
       </aside>
       <main className="content">{children}</main>
     </div>

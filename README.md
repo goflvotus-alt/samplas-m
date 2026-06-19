@@ -184,6 +184,7 @@ Then add these Vercel environment variables:
 ```text
 OPENAI_API_KEY
 ADMIN_PASSWORD
+ADMIN_SESSION_SECRET
 OPENAI_MODEL
 OPENAI_REASONING_EFFORT
 UPSTASH_REDIS_REST_URL
@@ -229,13 +230,13 @@ KV_REST_API_URL
 KV_REST_API_TOKEN
 ```
 
-The page also requires `ADMIN_PASSWORD` when saving. Saved guidelines are read by `POST /api/generate-card-news` and included in the OpenAI prompt.
+The admin site uses `/login` for a persistent browser session. Saved guidelines are read by `POST /api/generate-card-news` and included in the OpenAI prompt.
 
 ### Admin Password Changes
 
 The first admin password comes from the Vercel `ADMIN_PASSWORD` environment variable.
 
-When Redis storage is connected, `/admin/settings` can save a new admin password. The saved password is hashed in Redis and becomes the active admin password for guideline editing and settings changes.
+When Redis storage is connected, `/admin/settings` can save a new admin password. The saved password is hashed in Redis and becomes the active admin password for future logins.
 
 ### Editable Brands And Feedback
 

@@ -14,14 +14,11 @@ type PasswordStatus = {
 export default function SettingsPanel(): ReactElement {
   const [status, setStatus] = useState<PasswordStatus | null>(null);
   const [message, setMessage] = useState("Loading settings...");
-  const [currentPassword, setCurrentPassword] = useState("");
   const [nextPassword, setNextPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const storedPassword = window.sessionStorage.getItem("samplas-admin-password") || "";
-    setCurrentPassword(storedPassword);
     void loadStatus();
   }, []);
 
@@ -51,23 +48,26 @@ export default function SettingsPanel(): ReactElement {
       const response = await fetch("/api/admin/settings", {
         method: "PATCH",
         headers: {
-          "Content-Type": "application/json",
-          "x-admin-password": currentPassword
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           nextPassword
-        })
+        }),
+        credentials: "same-origin"
       });
 
       const json = (await response.json()) as PasswordStatus;
 
       if (!response.ok) {
         setMessage(json.error || "Could not update password.");
+
+        if (response.status === 401) {
+          window.location.href = "/login";
+        }
+
         return;
       }
 
-      window.sessionStorage.setItem("samplas-admin-password", nextPassword);
-      setCurrentPassword(nextPassword);
       setNextPassword("");
       setConfirmPassword("");
       setStatus(json);
@@ -84,8 +84,8 @@ export default function SettingsPanel(): ReactElement {
       <section className="card">
         <h2>Admin Password</h2>
         <p>
-          처음에는 Vercel 환경변수의 ADMIN_PASSWORD를 사용합니다. Redis 저장소가 연결되어 있으면 여기서 새
-          비밀번호로 바꿀 수 있습니다.
+          로그인 세션으로 관리자 권한을 확인합니다. Redis 저장소가 연결되어 있으면 여기서 새 비밀번호로 바꿀 수
+          있습니다.
         </p>
 
         <div className="status-list section">
@@ -106,16 +106,6 @@ export default function SettingsPanel(): ReactElement {
 
       <section className="card">
         <div className="form-grid">
-          <div className="field">
-            <label htmlFor="currentPassword">Current Password</label>
-            <input
-              id="currentPassword"
-              type="password"
-              value={currentPassword}
-              onChange={(event) => setCurrentPassword(event.target.value)}
-            />
-          </div>
-
           <div className="field">
             <label htmlFor="nextPassword">New Password</label>
             <input

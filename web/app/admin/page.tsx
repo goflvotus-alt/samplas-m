@@ -5,13 +5,13 @@ export default function AdminPage(): ReactElement {
     <>
       <header className="page-header">
         <div>
-          <p className="eyebrow">Dashboard</p>
-          <h1>운영 홈</h1>
+          <p className="eyebrow">SAMPLAS Operating System</p>
+          <h1>에디토리얼 인텔리전스</h1>
         </div>
-        <span className="badge">Ready</span>
+        <span className="badge">Session Active</span>
       </header>
 
-      <div className="grid three">
+      <div className="grid three editorial-summary">
         <section className="card">
           <div className="metric">2</div>
           <h2>Plugin Routes</h2>
