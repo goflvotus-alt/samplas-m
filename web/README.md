@@ -52,8 +52,8 @@ Implemented:
 
 - `/admin` preview dashboard
 - `/admin/guidelines` editable guideline manager
-- `/admin/brands` scaffold
-- `/admin/feedback` scaffold
+- `/admin/brands` editable brand manager
+- `/admin/feedback` editable feedback manager
 - `/admin/test` generation test page
 - `/admin/settings` admin password settings
 - `GET /health`
@@ -62,16 +62,21 @@ Implemented:
 - `GET /api/guidelines`
 - `PUT /api/guidelines`
 - `GET /api/guidelines/history`
+- `GET /api/brands`
+- `POST /api/brands`
+- `PUT /api/brands/:brandName`
+- `DELETE /api/brands/:brandName`
+- `GET /api/feedback`
+- `POST /api/feedback`
+- `PATCH /api/feedback/:id`
+- `DELETE /api/feedback/:id`
 - `GET /api/admin/settings`
 - `PATCH /api/admin/settings`
-- Read-only sample APIs for guidelines, brands, and feedback
 
 Not implemented yet:
 
 - Persistent admin login
-- Brand and feedback database storage
-- Brand editing
-- Feedback moderation
+- Full database migration beyond Redis
 
 ## Editable Guidelines
 
@@ -95,6 +100,14 @@ KV_REST_API_TOKEN
 The Save button sends the admin password only to the server API. The OpenAI API key and Redis token remain server-side.
 
 Saved guidelines are included in future `POST /api/generate-card-news` prompts.
+
+## Brand And Feedback Storage
+
+`/admin/brands` can add, edit, delete, and search brand knowledge entries.
+
+`/admin/feedback` can mark feedback as `reviewed`, `useful`, or `ignored`, and can delete feedback entries.
+
+Saved brand data and useful feedback are included in future `POST /api/generate-card-news` prompts.
 
 ## Admin Password
 

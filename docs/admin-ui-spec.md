@@ -110,6 +110,14 @@ Future features:
 - Delete Brand
 - Search Brand
 
+Current Vercel scaffold:
+
+- Add Brand
+- Edit Brand
+- Delete Brand
+- Search Brand
+- Redis-backed persistence when storage variables are configured
+
 UX:
 
 - List brands in the left column.
@@ -149,6 +157,14 @@ Future features:
 - Mark useful
 - Mark ignored
 - Delete
+
+Current Vercel scaffold:
+
+- Mark reviewed
+- Mark useful
+- Mark ignored
+- Delete
+- Redis-backed persistence when storage variables are configured
 
 Purpose:
 

@@ -236,3 +236,9 @@ The page also requires `ADMIN_PASSWORD` when saving. Saved guidelines are read b
 The first admin password comes from the Vercel `ADMIN_PASSWORD` environment variable.
 
 When Redis storage is connected, `/admin/settings` can save a new admin password. The saved password is hashed in Redis and becomes the active admin password for guideline editing and settings changes.
+
+### Editable Brands And Feedback
+
+The Vercel scaffold includes editable `/admin/brands` and `/admin/feedback` pages.
+
+Brand data can be added, edited, deleted, and searched. Useful feedback can be marked and is included in future AI generation prompts.

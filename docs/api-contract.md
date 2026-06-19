@@ -175,13 +175,31 @@ Returns brand knowledge entries.
 
 Creates a brand entry.
 
+Requires:
+
+```text
+x-admin-password: current-admin-password
+```
+
 ### PUT /api/brands/:brandName
 
 Updates a brand entry.
 
+Requires:
+
+```text
+x-admin-password: current-admin-password
+```
+
 ### DELETE /api/brands/:brandName
 
 Deletes a brand entry.
+
+Requires:
+
+```text
+x-admin-password: current-admin-password
+```
 
 ### GET /api/feedback
 
@@ -207,12 +225,28 @@ Request:
 
 Updates feedback status.
 
+Requires:
+
+```text
+x-admin-password: current-admin-password
+```
+
 Allowed statuses:
 
 - `new`
 - `reviewed`
 - `useful`
 - `ignored`
+
+### DELETE /api/feedback/:id
+
+Deletes a feedback entry.
+
+Requires:
+
+```text
+x-admin-password: current-admin-password
+```
 
 ### GET /api/admin/settings
 

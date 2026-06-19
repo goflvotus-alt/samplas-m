@@ -178,8 +178,8 @@ Implemented as Vercel scaffold:
 - `web/`
 - `/admin`
 - `/admin/guidelines` editable guideline manager
-- `/admin/brands`
-- `/admin/feedback`
+- `/admin/brands` editable brand manager
+- `/admin/feedback` editable feedback manager
 - `/admin/test`
 - `/admin/settings`
 - `/api/health`
@@ -187,13 +187,13 @@ Implemented as Vercel scaffold:
 - `/api/guidelines`
 - `/api/guidelines/history`
 - `/api/admin/settings`
+- `/api/brands`
+- `/api/feedback`
 
 Not implemented yet:
 
 - Persistent admin login
-- Brand and feedback database storage
-- Brand database editing
-- Feedback review dashboard
+- Full database migration beyond Redis
 
 Prepared for future implementation:
 

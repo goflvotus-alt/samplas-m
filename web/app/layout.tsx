@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "SAMPLAS M Admin",
-  description: "Vercel-ready Admin and API scaffold for SAMPLAS M"
+  description: "SAMPLAS M Admin and API"
 };
 
 export default function RootLayout({

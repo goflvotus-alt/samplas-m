@@ -1,4 +1,6 @@
 import { ApiError } from "@/lib/apiError";
+import { formatBrandsForPrompt, getBrands, type BrandEntry } from "@/lib/brandStore";
+import { formatUsefulFeedbackForPrompt, getFeedbackEntries, type FeedbackEntry } from "@/lib/feedbackStore";
 import { formatGuidelinesForPrompt, getGuidelines, type Guidelines } from "@/lib/guidelineStore";
 import type { GeneratedCard, GenerateCardNewsResponse, ImageFocus, NormalizedRequest, PageInput } from "@/lib/types";
 
@@ -7,6 +9,8 @@ type JsonObject = Record<string, unknown>;
 export async function generateCardNews(rawBody: unknown): Promise<GenerateCardNewsResponse> {
   const input = normalizeRequestBody(rawBody);
   const { guidelines } = await getGuidelines();
+  const { brands } = await getBrands();
+  const { feedback } = await getFeedbackEntries();
 
   if (!process.env.OPENAI_API_KEY) {
     throw new ApiError(500, "OPENAI_API_KEY is missing. Add it in Vercel Project Settings > Environment Variables.");
@@ -18,7 +22,7 @@ export async function generateCardNews(rawBody: unknown): Promise<GenerateCardNe
       Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify(buildOpenAiRequest(input, guidelines))
+    body: JSON.stringify(buildOpenAiRequest(input, guidelines, brands, feedback))
   });
 
   const raw = await openAiResponse.text();
@@ -111,7 +115,12 @@ function normalizeImageFocus(value: unknown): ImageFocus {
   return ["center", "top", "bottom", "left", "right"].includes(focus) ? (focus as ImageFocus) : "center";
 }
 
-function buildOpenAiRequest(input: NormalizedRequest, guidelines: Guidelines): JsonObject {
+function buildOpenAiRequest(
+  input: NormalizedRequest,
+  guidelines: Guidelines,
+  brands: BrandEntry[],
+  feedback: FeedbackEntry[]
+): JsonObject {
   return {
     model: process.env.OPENAI_MODEL || "gpt-5.5",
     reasoning: {
@@ -177,6 +186,7 @@ function buildOpenAiRequest(input: NormalizedRequest, guidelines: Guidelines): J
     instructions: [
       "Polish user-provided card-news drafts for a multi-slide post.",
       "Follow the active SAMPLAS M guidelines supplied in the user prompt.",
+      "Use brand knowledge and useful feedback when relevant.",
       "Preserve the user's intent, order, and concrete facts.",
       "Do not invent dates, names, statistics, or claims not present in the input.",
       "Return exactly one card for each requested page and preserve each page's format value.",
@@ -188,7 +198,7 @@ function buildOpenAiRequest(input: NormalizedRequest, guidelines: Guidelines): J
         content: [
           {
             type: "input_text",
-            text: buildPromptText(input, guidelines)
+            text: buildPromptText(input, guidelines, brands, feedback)
           }
         ]
       }
@@ -196,13 +206,27 @@ function buildOpenAiRequest(input: NormalizedRequest, guidelines: Guidelines): J
   };
 }
 
-function buildPromptText(input: NormalizedRequest, guidelines: Guidelines): string {
+function buildPromptText(
+  input: NormalizedRequest,
+  guidelines: Guidelines,
+  brands: BrandEntry[],
+  feedback: FeedbackEntry[]
+): string {
   const activeGuidelines = formatGuidelinesForPrompt(guidelines) || "None";
+  const selectedBrandNames = input.pages.map((page) => page.category).filter(Boolean);
+  const brandKnowledge = formatBrandsForPrompt(brands, selectedBrandNames);
+  const usefulFeedback = formatUsefulFeedbackForPrompt(feedback);
 
   if (input.mode === "pages") {
     return [
       "Active SAMPLAS M guidelines:",
       activeGuidelines,
+      "",
+      "Brand knowledge:",
+      brandKnowledge,
+      "",
+      "Useful feedback:",
+      usefulFeedback,
       "",
       `Overall caption draft: ${input.postCaption || "None"}`,
       `Overall mood: ${input.mood || "Not specified"}`,
@@ -216,6 +240,12 @@ function buildPromptText(input: NormalizedRequest, guidelines: Guidelines): stri
   return [
     "Active SAMPLAS M guidelines:",
     activeGuidelines,
+    "",
+    "Brand knowledge:",
+    brandKnowledge,
+    "",
+    "Useful feedback:",
+    usefulFeedback,
     "",
     `Topic: ${input.topic}`,
     `Tone: ${input.tone}`,
