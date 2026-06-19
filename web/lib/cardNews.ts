@@ -1,19 +1,8 @@
-import type { GeneratedCard, GenerateCardNewsResponse, ImageFocus, NormalizedRequest, PageInput } from "@/lib/types";
+import { ApiError } from "@/lib/apiError";
 import { formatGuidelinesForPrompt, getGuidelines, type Guidelines } from "@/lib/guidelineStore";
+import type { GeneratedCard, GenerateCardNewsResponse, ImageFocus, NormalizedRequest, PageInput } from "@/lib/types";
 
 type JsonObject = Record<string, unknown>;
-
-export class ApiError extends Error {
-  status: number;
-  details?: string;
-
-  constructor(status: number, message: string, details?: string) {
-    super(message);
-    this.name = "ApiError";
-    this.status = status;
-    this.details = details;
-  }
-}
 
 export async function generateCardNews(rawBody: unknown): Promise<GenerateCardNewsResponse> {
   const input = normalizeRequestBody(rawBody);

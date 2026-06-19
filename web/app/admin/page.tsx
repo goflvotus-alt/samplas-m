@@ -5,10 +5,10 @@ export default function AdminPage(): ReactElement {
     <>
       <header className="page-header">
         <div>
-          <p className="eyebrow">Vercel Preview</p>
-          <h1>관리자 시스템 초안</h1>
+          <p className="eyebrow">Dashboard</p>
+          <h1>운영 홈</h1>
         </div>
-        <span className="badge">API compatible</span>
+        <span className="badge">Ready</span>
       </header>
 
       <div className="grid three">
@@ -20,12 +20,12 @@ export default function AdminPage(): ReactElement {
         <section className="card">
           <div className="metric">4</div>
           <h2>Admin Areas</h2>
-          <p>Guidelines, Brands, Feedback, Test 화면의 뼈대가 있습니다.</p>
+          <p>Guidelines, Brands, Feedback, Test 화면을 관리합니다.</p>
         </section>
         <section className="card">
-          <div className="metric">0</div>
-          <h2>Database</h2>
-          <p>아직 DB 저장은 연결하지 않았습니다. 샘플 데이터만 보여줍니다.</p>
+          <div className="metric">1</div>
+          <h2>Editable Area</h2>
+          <p>Guidelines는 저장소 연결 후 바로 편집할 수 있습니다.</p>
         </section>
       </div>
 

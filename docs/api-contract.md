@@ -213,3 +213,48 @@ Allowed statuses:
 - `reviewed`
 - `useful`
 - `ignored`
+
+### GET /api/admin/settings
+
+Returns admin settings status without exposing the password.
+
+Response:
+
+```json
+{
+  "storage": "redis",
+  "canChangePassword": true,
+  "hasCustomPassword": true,
+  "hasFallbackPassword": true
+}
+```
+
+### PATCH /api/admin/settings
+
+Changes the admin password when Redis storage is configured.
+
+Headers:
+
+```text
+x-admin-password: current-password
+```
+
+Request:
+
+```json
+{
+  "nextPassword": "new-password"
+}
+```
+
+Response:
+
+```json
+{
+  "ok": true,
+  "storage": "redis",
+  "canChangePassword": true,
+  "hasCustomPassword": true,
+  "hasFallbackPassword": true
+}
+```

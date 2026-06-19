@@ -55,12 +55,15 @@ Implemented:
 - `/admin/brands` scaffold
 - `/admin/feedback` scaffold
 - `/admin/test` generation test page
+- `/admin/settings` admin password settings
 - `GET /health`
 - `GET /api/health`
 - `POST /api/generate-card-news`
 - `GET /api/guidelines`
 - `PUT /api/guidelines`
 - `GET /api/guidelines/history`
+- `GET /api/admin/settings`
+- `PATCH /api/admin/settings`
 - Read-only sample APIs for guidelines, brands, and feedback
 
 Not implemented yet:
@@ -92,3 +95,9 @@ KV_REST_API_TOKEN
 The Save button sends the admin password only to the server API. The OpenAI API key and Redis token remain server-side.
 
 Saved guidelines are included in future `POST /api/generate-card-news` prompts.
+
+## Admin Password
+
+`ADMIN_PASSWORD` remains the first fallback password.
+
+When Redis storage is configured, `/admin/settings` can save a new admin password. After a custom password is saved, that password is hashed in Redis and becomes the active admin password for guideline editing and settings changes.

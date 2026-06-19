@@ -29,6 +29,7 @@ The current plugin and Express backend must continue working as-is.
   /admin/brands
   /admin/feedback
   /admin/test
+  /admin/settings
 
 /app/api
   /health
@@ -100,6 +101,7 @@ Current scaffold added:
 - `web/app/admin/brands`
 - `web/app/admin/feedback`
 - `web/app/admin/test`
+- `web/app/admin/settings`
 - `web/app/api/health`
 - `web/app/api/generate-card-news`
 - `web/app/health`
@@ -142,7 +144,8 @@ Rules:
 
 - `OPENAI_API_KEY` must remain server-side only.
 - Never expose OpenAI keys to the plugin, browser UI, or Admin frontend bundle.
-- `ADMIN_PASSWORD` is only for future Admin login.
+- `ADMIN_PASSWORD` is the initial fallback admin password.
+- `/admin/settings` can store a hashed custom password after Redis storage is connected.
 - Redis REST variables are used by the editable guideline manager. The implementation accepts either `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` or `KV_REST_API_URL`/`KV_REST_API_TOKEN`.
 - MVP sessions may use secure HTTP-only cookies.
 - OAuth is not required for the first Admin version.

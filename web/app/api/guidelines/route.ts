@@ -1,5 +1,5 @@
 import { assertAdminPassword } from "@/lib/adminAuth";
-import { ApiError } from "@/lib/cardNews";
+import { ApiError } from "@/lib/apiError";
 import { jsonWithCors, optionsResponse } from "@/lib/cors";
 import { getGuidelines, saveGuidelines } from "@/lib/guidelineStore";
 
@@ -19,7 +19,7 @@ export async function GET(): Promise<Response> {
 
 export async function PUT(request: Request): Promise<Response> {
   try {
-    assertAdminPassword(request);
+    await assertAdminPassword(request);
 
     const body = await request.json();
     const source = body && typeof body === "object" && !Array.isArray(body) ? (body as Record<string, unknown>) : {};

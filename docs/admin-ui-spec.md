@@ -16,6 +16,7 @@ Do not add `/admin` to the current Express backend during the preparation phase.
 /admin/brands
 /admin/feedback
 /admin/test
+/admin/settings
 ```
 
 ## Login
@@ -198,3 +199,27 @@ Controls:
 - Save Feedback
 - Regenerate With Feedback
 
+## Settings Page
+
+Route:
+
+```text
+/admin/settings
+```
+
+Purpose:
+
+- Show whether Redis-backed admin settings are available.
+- Change the admin password after Redis storage is connected.
+- Keep `ADMIN_PASSWORD` as the initial fallback password.
+
+Fields:
+
+- Current Password
+- New Password
+- Confirm New Password
+
+Controls:
+
+- Save Password
+- Reload

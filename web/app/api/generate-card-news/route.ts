@@ -1,4 +1,5 @@
-import { ApiError, generateCardNews } from "@/lib/cardNews";
+import { ApiError } from "@/lib/apiError";
+import { generateCardNews } from "@/lib/cardNews";
 import { jsonWithCors, optionsResponse } from "@/lib/cors";
 
 export const runtime = "nodejs";

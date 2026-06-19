@@ -181,10 +181,12 @@ Implemented as Vercel scaffold:
 - `/admin/brands`
 - `/admin/feedback`
 - `/admin/test`
+- `/admin/settings`
 - `/api/health`
 - `/api/generate-card-news`
 - `/api/guidelines`
 - `/api/guidelines/history`
+- `/api/admin/settings`
 
 Not implemented yet:
 
@@ -204,3 +206,19 @@ Prepared for future implementation:
 - Prompt Builder helper scaffold
 
 The client can use the plugin now with the existing backend API. The Admin system should be treated as the next project phase.
+
+## Admin Password
+
+Initial password:
+
+```text
+ADMIN_PASSWORD
+```
+
+After Redis storage is connected, the password can be changed at:
+
+```text
+https://your-project.vercel.app/admin/settings
+```
+
+The changed password is used for guideline editing and settings changes.

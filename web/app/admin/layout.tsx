@@ -1,12 +1,12 @@
 import type { ReactElement, ReactNode } from "react";
 
 const navItems = [
-  { href: "/admin", label: "Overview" },
-  { href: "/admin/guidelines", label: "Guidelines" },
-  { href: "/admin/brands", label: "Brands" },
-  { href: "/admin/feedback", label: "Feedback" },
-  { href: "/admin/test", label: "Test" },
-  { href: "/login", label: "Login Preview" }
+  { href: "/admin", label: "홈" },
+  { href: "/admin/guidelines", label: "가이드라인" },
+  { href: "/admin/brands", label: "브랜드" },
+  { href: "/admin/feedback", label: "피드백" },
+  { href: "/admin/test", label: "생성 테스트" },
+  { href: "/admin/settings", label: "설정" }
 ];
 
 export default function AdminLayout({
@@ -18,8 +18,8 @@ export default function AdminLayout({
     <div className="admin-shell">
       <aside className="sidebar">
         <div className="brand-mark">
-          <div className="brand-title">SAMPLAS M</div>
-          <div className="brand-subtitle">Admin + API scaffold for Vercel deployment.</div>
+          <img className="brand-logo" src="/samplas-logo.png" alt="SAMPLAS" />
+          <div className="brand-subtitle">AI card-news admin</div>
         </div>
         <nav className="nav-list" aria-label="Admin navigation">
           {navItems.map((item) => (

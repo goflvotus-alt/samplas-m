@@ -168,6 +168,7 @@ Vercel scaffold:
 - `web/app/admin/brands`
 - `web/app/admin/feedback`
 - `web/app/admin/test`
+- `web/app/admin/settings`
 - `web/app/api/health`
 - `web/app/api/generate-card-news`
 - `web/app/health`
@@ -229,3 +230,9 @@ KV_REST_API_TOKEN
 ```
 
 The page also requires `ADMIN_PASSWORD` when saving. Saved guidelines are read by `POST /api/generate-card-news` and included in the OpenAI prompt.
+
+### Admin Password Changes
+
+The first admin password comes from the Vercel `ADMIN_PASSWORD` environment variable.
+
+When Redis storage is connected, `/admin/settings` can save a new admin password. The saved password is hashed in Redis and becomes the active admin password for guideline editing and settings changes.
