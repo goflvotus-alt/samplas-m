@@ -7,7 +7,7 @@ export default function GuidelinesPage(): ReactElement {
       <header className="page-header">
         <div>
           <p className="eyebrow">AI Guideline System</p>
-          <h1>AI 규칙 운영</h1>
+          <h1>AI 편집 가이드라인</h1>
         </div>
         <span className="badge">Editorial Control</span>
       </header>

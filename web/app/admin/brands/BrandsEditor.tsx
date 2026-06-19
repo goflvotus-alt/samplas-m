@@ -10,6 +10,7 @@ type BrandEntry = {
   description: string;
   comparableBrands: string[];
   notes: string[];
+  brandImage: string;
 };
 
 const emptyBrand: BrandEntry = {
@@ -18,8 +19,17 @@ const emptyBrand: BrandEntry = {
   keywords: [],
   description: "",
   comparableBrands: [],
-  notes: []
+  notes: [],
+  brandImage: ""
 };
+
+type ImportedBrand = {
+  brandName: string;
+  brandImage: string;
+  description: string;
+};
+
+const BRAND_IMAGE_NOTE_PREFIX = "Brand Image:";
 
 export default function BrandsEditor(): ReactElement {
   const [brands, setBrands] = useState<BrandEntry[]>([]);
@@ -29,6 +39,7 @@ export default function BrandsEditor(): ReactElement {
   const [storage, setStorage] = useState("unknown");
   const [status, setStatus] = useState("Loading brands...");
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const filteredBrands = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -38,7 +49,7 @@ export default function BrandsEditor(): ReactElement {
     }
 
     return brands.filter((brand) =>
-      [brand.brandName, brand.designer, brand.description, ...brand.keywords, ...brand.comparableBrands, ...brand.notes]
+      [brand.brandName, brand.designer, brand.description, brand.brandImage, ...brand.keywords, ...brand.comparableBrands, ...brand.notes]
         .join(" ")
         .toLowerCase()
         .includes(query)
@@ -82,7 +93,7 @@ export default function BrandsEditor(): ReactElement {
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify(draft),
+        body: JSON.stringify(toPersistedBrand(draft)),
         credentials: "same-origin"
       });
 
@@ -171,8 +182,90 @@ export default function BrandsEditor(): ReactElement {
       keywords: key === "keywords" ? toList(value) : current.keywords,
       description: key === "description" ? value : current.description,
       comparableBrands: key === "comparableBrands" ? toList(value) : current.comparableBrands,
-      notes: key === "notes" ? toList(value) : current.notes
+      notes: key === "notes" ? toList(value) : current.notes,
+      brandImage: key === "brandImage" ? value : current.brandImage
     }));
+  }
+
+  async function importSamplasBrands(): Promise<void> {
+    setImporting(true);
+    setStatus("SAMPLAS 브랜드를 불러오는 중...");
+
+    try {
+      const response = await fetch("/api/admin/import-samplas-brands", {
+        cache: "no-store",
+        credentials: "same-origin"
+      });
+      const json = (await response.json()) as { brands?: ImportedBrand[]; error?: string };
+
+      if (!response.ok) {
+        setStatus(json.error || "Could not import SAMPLAS brands.");
+
+        if (response.status === 401) {
+          window.location.href = "/login";
+        }
+
+        return;
+      }
+
+      const importedBrands = normalizeImportedBrands(json.brands || []);
+      const existingKeys = new Set(brands.map((brand) => normalizeKey(brand.brandName)));
+      const duplicateBrands = importedBrands.filter((brand) => existingKeys.has(normalizeKey(brand.brandName)));
+      const shouldOverwrite =
+        duplicateBrands.length > 0
+          ? window.confirm(`이미 저장된 브랜드 ${duplicateBrands.length}개가 있습니다. 설명과 이미지 정보를 덮어쓸까요?`)
+          : false;
+      const brandsToSave = importedBrands.filter((brand) => shouldOverwrite || !existingKeys.has(normalizeKey(brand.brandName)));
+
+      if (brandsToSave.length === 0) {
+        setStatus("새로 저장할 브랜드가 없습니다.");
+        return;
+      }
+
+      let nextBrands = brands;
+
+      for (const importedBrand of brandsToSave) {
+        const existingBrand = nextBrands.find((brand) => normalizeKey(brand.brandName) === normalizeKey(importedBrand.brandName));
+        const responseForBrand = await fetch("/api/brands", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(
+            toPersistedBrand({
+              brandName: importedBrand.brandName,
+              designer: existingBrand?.designer || "",
+              keywords: existingBrand?.keywords || [],
+              description: importedBrand.description || existingBrand?.description || "",
+              comparableBrands: existingBrand?.comparableBrands || [],
+              notes: existingBrand?.notes || [],
+              brandImage: importedBrand.brandImage || existingBrand?.brandImage || ""
+            })
+          ),
+          credentials: "same-origin"
+        });
+        const brandJson = (await responseForBrand.json()) as { brands?: BrandEntry[]; error?: string };
+
+        if (!responseForBrand.ok) {
+          setStatus(brandJson.error || `Could not save ${importedBrand.brandName}.`);
+
+          if (responseForBrand.status === 401) {
+            window.location.href = "/login";
+          }
+
+          return;
+        }
+
+        nextBrands = normalizeBrands(brandJson.brands || []);
+      }
+
+      setBrands(nextBrands);
+      setStatus(`${brandsToSave.length}개 브랜드를 불러와 저장했습니다.`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Could not import SAMPLAS brands.");
+    } finally {
+      setImporting(false);
+    }
   }
 
   return (
@@ -191,9 +284,38 @@ export default function BrandsEditor(): ReactElement {
               <p className="eyebrow">Brand Knowledge Base</p>
               <h2>브랜드 인덱스</h2>
             </div>
-            <button className="button secondary" disabled={saving} onClick={createNewBrand} type="button">
-              New
-            </button>
+            <div className="button-row">
+              <button className="button secondary" disabled={saving || importing} onClick={importSamplasBrands} type="button">
+                불러오기
+              </button>
+              <button className="button secondary" disabled={saving || importing} onClick={createNewBrand} type="button">
+                New
+              </button>
+            </div>
+          </div>
+
+          <div className="field section">
+            <label htmlFor="brandSelector">Brand Selector</label>
+            <select
+              id="brandSelector"
+              value={selectedName}
+              onChange={(event) => {
+                const brand = brands.find((item) => item.brandName === event.target.value);
+
+                if (brand) {
+                  selectBrand(brand);
+                } else {
+                  createNewBrand();
+                }
+              }}
+            >
+              <option value="">브랜드 선택</option>
+              {brands.map((brand) => (
+                <option key={brand.brandName} value={brand.brandName}>
+                  {brand.brandName}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="field section">
@@ -234,6 +356,12 @@ export default function BrandsEditor(): ReactElement {
             <div className="field">
               <label htmlFor="designer">Designer</label>
               <input id="designer" value={draft.designer} onChange={(event) => updateDraft("designer", event.target.value)} />
+            </div>
+
+            <div className="field field-wide brand-image-field">
+              <label htmlFor="brandImage">Brand Image</label>
+              <input id="brandImage" value={draft.brandImage} onChange={(event) => updateDraft("brandImage", event.target.value)} />
+              {draft.brandImage ? <img src={draft.brandImage} alt={draft.brandName || "Brand image"} /> : null}
             </div>
 
             <div className="field field-wide">
@@ -294,6 +422,7 @@ function normalizeBrands(input: unknown): BrandEntry[] {
 
   return input.map((brand) => {
     const source = brand && typeof brand === "object" && !Array.isArray(brand) ? (brand as Record<string, unknown>) : {};
+    const rawNotes = Array.isArray(source.notes) ? source.notes.map(String) : [];
 
     return {
       brandName: String(source.brandName || ""),
@@ -301,9 +430,65 @@ function normalizeBrands(input: unknown): BrandEntry[] {
       keywords: Array.isArray(source.keywords) ? source.keywords.map(String) : [],
       description: String(source.description || ""),
       comparableBrands: Array.isArray(source.comparableBrands) ? source.comparableBrands.map(String) : [],
-      notes: Array.isArray(source.notes) ? source.notes.map(String) : []
+      notes: rawNotes.filter((note) => !note.startsWith(BRAND_IMAGE_NOTE_PREFIX)),
+      brandImage: extractBrandImage(rawNotes)
     };
   });
+}
+
+function normalizeImportedBrands(input: unknown): ImportedBrand[] {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  const seen = new Set<string>();
+  const brands: ImportedBrand[] = [];
+
+  for (const item of input) {
+    const source = item && typeof item === "object" && !Array.isArray(item) ? (item as Record<string, unknown>) : {};
+    const brandName = String(source.brandName || "").trim();
+    const key = normalizeKey(brandName);
+
+    if (!brandName || seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    brands.push({
+      brandName,
+      brandImage: String(source.brandImage || "").trim(),
+      description: String(source.description || "").trim()
+    });
+  }
+
+  return brands;
+}
+
+function toPersistedBrand(brand: BrandEntry): Omit<BrandEntry, "brandImage"> {
+  const notes = brand.notes.filter((note) => !note.startsWith(BRAND_IMAGE_NOTE_PREFIX));
+
+  if (brand.brandImage.trim()) {
+    notes.unshift(`${BRAND_IMAGE_NOTE_PREFIX} ${brand.brandImage.trim()}`);
+  }
+
+  return {
+    brandName: brand.brandName,
+    designer: brand.designer,
+    keywords: brand.keywords,
+    description: brand.description,
+    comparableBrands: brand.comparableBrands,
+    notes
+  };
+}
+
+function extractBrandImage(notes: string[]): string {
+  const imageNote = notes.find((note) => note.startsWith(BRAND_IMAGE_NOTE_PREFIX));
+
+  return imageNote ? imageNote.slice(BRAND_IMAGE_NOTE_PREFIX.length).trim() : "";
+}
+
+function normalizeKey(value: string): string {
+  return value.trim().toLowerCase();
 }
 
 function toList(value: string): string[] {

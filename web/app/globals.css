@@ -476,6 +476,15 @@ p {
   grid-template-columns: minmax(280px, 1fr) minmax(170px, 0.55fr) auto;
 }
 
+.category-selector-panel {
+  align-items: end;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  padding-bottom: 8px;
+}
+
 .content-category-switcher {
   border-bottom: 1px solid var(--line);
   display: grid;
@@ -607,6 +616,51 @@ p {
   padding: 10px 12px;
 }
 
+.empty-selection {
+  border: 1px solid var(--line);
+  padding: 10px 12px;
+}
+
+.empty-selection p,
+.status-note {
+  color: #777777;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.modal-backdrop {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.82);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 18px;
+  position: fixed;
+  z-index: 30;
+}
+
+.modal-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 12px;
+  max-width: 520px;
+  padding: 12px;
+  width: min(100%, 520px);
+}
+
+.modal-panel.compact {
+  max-width: 420px;
+}
+
+.modal-panel header {
+  align-items: start;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 10px;
+}
+
 .reference-frame {
   border: 1px solid var(--line);
 }
@@ -668,6 +722,14 @@ p {
 
 .knowledge-editor {
   padding: 12px;
+}
+
+.brand-image-field img {
+  border: 1px solid var(--line);
+  display: block;
+  max-height: 148px;
+  max-width: 220px;
+  object-fit: cover;
 }
 
 .entity-list {
@@ -941,6 +1003,7 @@ p {
 
   .guideline-row,
   .guideline-topline,
+  .category-selector-panel,
   .knowledge-grid,
   .reference-row,
   .review-grid,

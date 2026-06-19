@@ -401,7 +401,7 @@
 
           <div class="row">
             <div class="field">
-              <label for="pageFormat">양식</label>
+              <label for="pageFormat">콘텐츠 양식</label>
               <select id="pageFormat">
                 <option value="cover">Cover</option>
                 <option value="story">Story</option>
@@ -454,7 +454,7 @@
           <div class="actions">
             <button id="addPageButton" class="secondary" type="button">+ Page</button>
             <button id="removePageButton" class="secondary" type="button">Remove</button>
-            <button id="refreshFormatsButton" class="secondary" type="button">양식 새로고침</button>
+            <button id="refreshFormatsButton" class="secondary" type="button">양식 동기화</button>
             <button id="draftGenerateButton" class="secondary" type="button">템플릿 생성</button>
           </div>
         </section>
@@ -703,7 +703,7 @@
       refreshFormatsButton.addEventListener("click", () => {
         saveCurrentPage();
         parent.postMessage({ pluginMessage: { type: "load-formats" } }, "*");
-        setStatus("Loading format templates...");
+        setStatus("Loading content formats...");
       });
 
       $("pageImage").addEventListener("change", () => {
@@ -746,7 +746,7 @@
 
         if (message.type === "available-formats") {
           applyAvailableFormats(message.formats || []);
-          setStatus(`Loaded formats from ${message.templatePageName || "current page"}.`);
+          setStatus(`Loaded content formats from ${message.templatePageName || "current page"}.`);
           return;
         }
 

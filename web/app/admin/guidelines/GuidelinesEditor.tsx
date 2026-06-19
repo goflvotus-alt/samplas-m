@@ -86,7 +86,7 @@ const sections: Array<{ key: GuidelineKey; label: string; description: string }>
 
 export default function GuidelinesEditor(): ReactElement {
   const [system, setSystem] = useState<GuidelineSystem>(createEmptySystem());
-  const [selectedCategoryId, setSelectedCategoryId] = useState("category");
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [selectedVersion, setSelectedVersion] = useState("");
   const [status, setStatus] = useState("Loading guidelines...");
@@ -97,18 +97,22 @@ export default function GuidelinesEditor(): ReactElement {
   const [lastSavedAt, setLastSavedAt] = useState("");
   const [newCategoryName, setNewCategoryName] = useState("");
   const [referenceMode, setReferenceMode] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [copiedCategory, setCopiedCategory] = useState<Pick<GuidelineCategory, "name" | "rules" | "references"> | null>(null);
+  const [modalStatus, setModalStatus] = useState("");
 
   const selectedCategory = useMemo(
-    () => system.categories.find((category) => category.id === selectedCategoryId) || system.categories[0],
+    () => system.categories.find((category) => category.id === selectedCategoryId),
     [selectedCategoryId, system.categories]
   );
   const selectedDrafts = useMemo(() => rulesToDrafts(selectedCategory?.rules || createEmptyRules()), [selectedCategory]);
 
   useEffect(() => {
-    void reloadAll();
+    void loadAll();
   }, []);
 
-  async function reloadAll(): Promise<void> {
+  async function loadAll(): Promise<void> {
     setStatus("Loading guidelines...");
 
     try {
@@ -122,7 +126,7 @@ export default function GuidelinesEditor(): ReactElement {
       const feedbackJson = await feedbackResponse.json();
 
       setSystem(nextSystem);
-      setSelectedCategoryId(nextSystem.activeCategoryId);
+      setSelectedCategoryId("");
       setStorage(guidelineResponse.headers.get("X-Samplas-Storage") || "unknown");
       setBrandCount(Array.isArray(brandsJson) ? brandsJson.length : 0);
       setFeedbackCount(Array.isArray(feedbackJson) ? feedbackJson.length : 0);
@@ -130,9 +134,9 @@ export default function GuidelinesEditor(): ReactElement {
       setReferenceMode(false);
       setSaveState("idle");
       setStatus(guidelineResponse.ok ? "Loaded" : "Could not load guidelines.");
-      await reloadHistorySafely();
+      await loadHistorySafely();
     } catch (error) {
-      console.error("[guidelines] Reload failed", error);
+      console.error("[guidelines] Load failed", error);
       setStatus(error instanceof Error ? error.message : "Could not load guidelines.");
       setSaveState("error");
     }
@@ -141,8 +145,12 @@ export default function GuidelinesEditor(): ReactElement {
   async function save(): Promise<void> {
     const nextSystem = normalizeGuidelineSystem({
       ...system,
-      activeCategoryId: selectedCategoryId
+      activeCategoryId: selectedCategoryId || system.activeCategoryId
     });
+    await persistSystem(nextSystem, selectedCategoryId, "Saved");
+  }
+
+  async function persistSystem(nextSystem: GuidelineSystem, nextSelectedCategoryId: string, successMessage: string): Promise<boolean> {
     setSaveState("saving");
     setStatus("Saving...");
 
@@ -178,44 +186,50 @@ export default function GuidelinesEditor(): ReactElement {
           window.location.href = "/login";
         }
 
-        return;
+        return false;
       }
 
       if (json.guidelines) {
         const savedSystem = normalizeGuidelineSystem(json.guidelines);
         setSystem(savedSystem);
-        setSelectedCategoryId(savedSystem.categories.some((category) => category.id === selectedCategoryId) ? selectedCategoryId : savedSystem.activeCategoryId);
+        setSelectedCategoryId(
+          nextSelectedCategoryId && savedSystem.categories.some((category) => category.id === nextSelectedCategoryId)
+            ? nextSelectedCategoryId
+            : ""
+        );
       }
 
-      await reloadFromRedisAfterSave();
+      await loadFromRedisAfterSave();
       setLastSavedAt(json.version || new Date().toISOString());
-      setStatus("Saved");
+      setStatus(successMessage);
       setSaveState("saved");
       window.setTimeout(() => setSaveState((current) => (current === "saved" ? "idle" : current)), 2000);
+      return true;
     } catch (error) {
       console.error("[guidelines] Save threw an error", error);
       setStatus(error instanceof Error ? error.message : "Could not save guidelines.");
       setSaveState("error");
+      return false;
     }
   }
 
-  async function reloadFromRedisAfterSave(): Promise<void> {
+  async function loadFromRedisAfterSave(): Promise<void> {
     const guidelineResponse = await fetch("/api/guidelines", { cache: "no-store" });
     const savedSystem = normalizeGuidelineSystem(await guidelineResponse.json());
 
     setSystem(savedSystem);
     setStorage(guidelineResponse.headers.get("X-Samplas-Storage") || storage);
-    await reloadHistorySafely();
+    await loadHistorySafely();
   }
 
-  async function reloadHistorySafely(): Promise<void> {
+  async function loadHistorySafely(): Promise<void> {
     try {
       const response = await fetch("/api/guidelines/history", { cache: "no-store" });
       const nextHistory = normalizeHistory(await response.json());
       setHistory(nextHistory);
       setLastSavedAt(nextHistory[0]?.version || "");
     } catch (error) {
-      console.error("[guidelines] History reload failed", error);
+      console.error("[guidelines] History load failed", error);
     }
   }
 
@@ -224,28 +238,57 @@ export default function GuidelinesEditor(): ReactElement {
     setReferenceMode(false);
   }
 
-  function addCategory(): void {
-    const name = newCategoryName.trim();
+  async function addCategory(): Promise<void> {
+    const names = Array.from(
+      new Set(
+        newCategoryName
+          .split(/[\n,]/)
+          .map((name) => name.trim())
+          .filter(Boolean)
+      )
+    );
 
-    if (!name) {
+    if (names.length === 0) {
+      setModalStatus("카테고리 이름을 입력해주세요.");
       return;
     }
 
-    const category = createCategory(name);
+    const existingKeys = new Set(system.categories.map((category) => normalizeMatchKey(category.name)));
+    const nextCategories = [...system.categories];
+    const createdCategories: GuidelineCategory[] = [];
 
-    if (system.categories.some((item) => normalizeMatchKey(item.name) === normalizeMatchKey(name))) {
-      setStatus("Category already exists.");
-      setSaveState("error");
+    for (const name of names) {
+      const key = normalizeMatchKey(name);
+
+      if (existingKeys.has(key)) {
+        continue;
+      }
+
+      const category = createCategory(name);
+      existingKeys.add(key);
+      nextCategories.push(category);
+      createdCategories.push(category);
+    }
+
+    if (createdCategories.length === 0) {
+      setModalStatus("이미 있는 카테고리입니다.");
       return;
     }
 
-    setSystem((current) => ({
-      ...current,
-      categories: [...current.categories, category]
-    }));
-    setSelectedCategoryId(category.id);
+    const nextSelectedCategoryId = createdCategories[createdCategories.length - 1].id;
+    const nextSystem = normalizeGuidelineSystem({
+      ...system,
+      activeCategoryId: nextSelectedCategoryId,
+      categories: nextCategories
+    });
+
+    setSystem(nextSystem);
+    setSelectedCategoryId(nextSelectedCategoryId);
     setNewCategoryName("");
-    markDirty();
+    setModalStatus("저장 중...");
+
+    const didSave = await persistSystem(nextSystem, nextSelectedCategoryId, "Category added.");
+    setModalStatus(didSave ? `${createdCategories.length}개 카테고리를 추가했습니다.` : "저장하지 못했습니다.");
   }
 
   function updateRule(key: GuidelineRuleKey, value: string): void {
@@ -287,7 +330,84 @@ export default function GuidelinesEditor(): ReactElement {
     }));
   }
 
+  function copyCategoryContent(): void {
+    if (!selectedCategory) {
+      setStatus("Choose a category first.");
+      return;
+    }
+
+    setCopiedCategory({
+      name: selectedCategory.name,
+      rules: cloneRules(selectedCategory.rules),
+      references: cloneReferences(selectedCategory.references)
+    });
+    setStatus(`Copied ${selectedCategory.name}.`);
+  }
+
+  async function pasteCategoryContent(): Promise<void> {
+    if (!selectedCategory || !copiedCategory) {
+      setStatus("Choose a category and copy content first.");
+      return;
+    }
+
+    const nextCategories = system.categories.map((category) =>
+      category.id === selectedCategory.id
+        ? {
+            ...category,
+            rules: cloneRules(copiedCategory.rules),
+            references: cloneReferences(copiedCategory.references)
+          }
+        : category
+    );
+    const nextSystem = normalizeGuidelineSystem({
+      ...system,
+      activeCategoryId: selectedCategory.id,
+      categories: nextCategories
+    });
+
+    setSystem(nextSystem);
+    await persistSystem(nextSystem, selectedCategory.id, `Pasted ${copiedCategory.name} into ${selectedCategory.name}.`);
+  }
+
+  function requestDeleteCategory(): void {
+    if (!selectedCategory) {
+      setStatus("Choose a category first.");
+      return;
+    }
+
+    if (system.categories.length <= 1) {
+      setStatus("At least one category is required.");
+      setSaveState("error");
+      return;
+    }
+
+    setIsDeleteModalOpen(true);
+  }
+
+  async function confirmDeleteCategory(): Promise<void> {
+    if (!selectedCategory) {
+      setIsDeleteModalOpen(false);
+      return;
+    }
+
+    const nextCategories = system.categories.filter((category) => category.id !== selectedCategory.id);
+    const nextSystem = normalizeGuidelineSystem({
+      ...system,
+      activeCategoryId: nextCategories[0]?.id || "category",
+      categories: nextCategories
+    });
+
+    setIsDeleteModalOpen(false);
+    setSystem(nextSystem);
+    setReferenceMode(false);
+    await persistSystem(nextSystem, "", "Category deleted.");
+  }
+
   function updateSelectedCategory(updater: (category: GuidelineCategory) => GuidelineCategory): void {
+    if (!selectedCategoryId) {
+      return;
+    }
+
     setSystem((current) => ({
       ...current,
       categories: current.categories.map((category) => (category.id === selectedCategoryId ? updater(category) : category))
@@ -332,58 +452,52 @@ export default function GuidelinesEditor(): ReactElement {
       </section>
 
       <section className="guideline-topline">
-        <div className="content-category-switcher">
-          <span>Content Category</span>
-          <div>
-            {system.categories.map((category) => (
-              <button
-                className={category.id === selectedCategoryId ? "active" : ""}
-                key={category.id}
-                onClick={() => selectCategory(category.id)}
-                type="button"
-              >
-                {category.name}
-              </button>
-            ))}
+        <div className="category-selector-panel">
+          <div className="field">
+            <label htmlFor="guidelineCategory">Content Category / 콘텐츠 카테고리</label>
+            <select id="guidelineCategory" value={selectedCategoryId} onChange={(event) => selectCategory(event.target.value)}>
+              <option value="">카테고리 선택</option>
+              {system.categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
           </div>
-          <div className="category-add">
-            <input
-              aria-label="New content category"
-              onChange={(event) => setNewCategoryName(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  addCategory();
-                }
-              }}
-              placeholder="New category"
-              value={newCategoryName}
-            />
-            <button className="button secondary" onClick={addCategory} type="button">
-              Add
+          <button className="button secondary" onClick={() => setIsAddModalOpen(true)} type="button">
+            Add
+          </button>
+        </div>
+
+        {selectedCategory ? (
+          <div className="save-console">
+            <div>
+              <p className="eyebrow">Save State</p>
+              <h2>{statusLabel}</h2>
+              <p>Last Saved: {formatDateTime(lastSavedAt)}</p>
+            </div>
+          </div>
+        ) : null}
+
+        {selectedCategory ? (
+          <div className="button-row guideline-actions">
+            <button className={saveButtonClassName} disabled={saveState === "saving"} onClick={save} type="button">
+              {saveButtonLabel}
+            </button>
+            <button className="button secondary" disabled={saveState === "saving"} onClick={copyCategoryContent} type="button">
+              Copy
+            </button>
+            <button className="button secondary" disabled={saveState === "saving" || !copiedCategory} onClick={pasteCategoryContent} type="button">
+              Paste
+            </button>
+            <button className="button secondary" disabled={saveState === "saving"} onClick={requestDeleteCategory} type="button">
+              Delete
             </button>
           </div>
-        </div>
-
-        <div className="save-console">
-          <div>
-            <p className="eyebrow">Save State</p>
-            <h2>{statusLabel}</h2>
-            <p>Last Saved: {formatDateTime(lastSavedAt)}</p>
-          </div>
-        </div>
-
-        <div className="button-row guideline-actions">
-          <button className={saveButtonClassName} disabled={saveState === "saving"} onClick={save} type="button">
-            {saveButtonLabel}
-          </button>
-          <button className="button secondary" disabled={saveState === "saving"} onClick={reloadAll} type="button">
-            Reload
-          </button>
-        </div>
+        ) : null}
       </section>
 
-      {referenceMode ? (
+      {selectedCategory ? referenceMode ? (
         <ReferenceTable
           categoryName={selectedCategory?.name || "Category"}
           onAddReference={addReference}
@@ -421,28 +535,140 @@ export default function GuidelinesEditor(): ReactElement {
             </article>
           ))}
         </section>
-      )}
+      ) : null}
 
-      <section className="archive-console">
-        <div>
-          <p className="eyebrow">Version Archive</p>
-          <h2>Restore Previous Rules</h2>
-        </div>
+      {selectedCategory ? (
+        <section className="archive-console">
+          <div>
+            <p className="eyebrow">Version Archive</p>
+            <h2>Restore Previous Rules</h2>
+          </div>
+          <div className="field">
+            <label htmlFor="history">Previous Version</label>
+            <select id="history" value={selectedVersion} onChange={(event) => setSelectedVersion(event.target.value)}>
+              <option value="">Choose version</option>
+              {history.map((entry) => (
+                <option key={entry.version} value={entry.version}>
+                  {entry.version} by {entry.updatedBy}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button className="button secondary" onClick={restoreSelectedVersion} type="button">
+            Restore
+          </button>
+          {status ? <div className={`status-message ${saveState === "error" ? "error" : ""}`}>{status}</div> : null}
+        </section>
+      ) : null}
+
+      {isAddModalOpen ? (
+        <CategoryModal
+          disabled={saveState === "saving"}
+          modalStatus={modalStatus}
+          newCategoryName={newCategoryName}
+          onAddCategory={addCategory}
+          onChangeName={setNewCategoryName}
+          onClose={() => {
+            setIsAddModalOpen(false);
+            setModalStatus("");
+            setNewCategoryName("");
+          }}
+        />
+      ) : null}
+
+      {isDeleteModalOpen ? (
+        <ConfirmModal
+          disabled={saveState === "saving"}
+          message="카테고리 내용을 삭제하시겠습니까?"
+          onCancel={() => setIsDeleteModalOpen(false)}
+          onConfirm={confirmDeleteCategory}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function CategoryModal({
+  disabled,
+  modalStatus,
+  newCategoryName,
+  onAddCategory,
+  onChangeName,
+  onClose
+}: {
+  disabled: boolean;
+  modalStatus: string;
+  newCategoryName: string;
+  onAddCategory: () => Promise<void>;
+  onChangeName: (value: string) => void;
+  onClose: () => void;
+}): ReactElement {
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="modal-panel" role="dialog" aria-modal="true" aria-label="Add content category">
+        <header>
+          <div>
+            <p className="eyebrow">Content Category</p>
+            <h2>카테고리 추가</h2>
+          </div>
+          <button className="button secondary" onClick={onClose} type="button">
+            X
+          </button>
+        </header>
         <div className="field">
-          <label htmlFor="history">Previous Version</label>
-          <select id="history" value={selectedVersion} onChange={(event) => setSelectedVersion(event.target.value)}>
-            <option value="">Choose version</option>
-            {history.map((entry) => (
-              <option key={entry.version} value={entry.version}>
-                {entry.version} by {entry.updatedBy}
-              </option>
-            ))}
-          </select>
+          <label htmlFor="newCategoryName">Category Name</label>
+          <textarea
+            id="newCategoryName"
+            onChange={(event) => onChangeName(event.target.value)}
+            onKeyDown={(event) => {
+              if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+                event.preventDefault();
+                void onAddCategory();
+              }
+            }}
+            placeholder="한 줄에 하나씩 입력하거나 쉼표로 구분"
+            value={newCategoryName}
+          />
         </div>
-        <button className="button secondary" onClick={restoreSelectedVersion} type="button">
-          Restore
-        </button>
-        {status ? <div className={`status-message ${saveState === "error" ? "error" : ""}`}>{status}</div> : null}
+        <div className="button-row split-row">
+          <button className="button" disabled={disabled} onClick={() => void onAddCategory()} type="button">
+            Add
+          </button>
+          <span className="status-note">{modalStatus || "추가 후에도 창은 열린 상태로 유지됩니다."}</span>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function ConfirmModal({
+  disabled,
+  message,
+  onCancel,
+  onConfirm
+}: {
+  disabled: boolean;
+  message: string;
+  onCancel: () => void;
+  onConfirm: () => Promise<void>;
+}): ReactElement {
+  return (
+    <div className="modal-backdrop" role="presentation">
+      <section className="modal-panel compact" role="dialog" aria-modal="true" aria-label="Confirm category deletion">
+        <header>
+          <h2>{message}</h2>
+          <button className="button secondary" onClick={onCancel} type="button">
+            X
+          </button>
+        </header>
+        <div className="button-row">
+          <button className="button" disabled={disabled} onClick={() => void onConfirm()} type="button">
+            Delete
+          </button>
+          <button className="button secondary" disabled={disabled} onClick={onCancel} type="button">
+            Cancel
+          </button>
+        </div>
       </section>
     </div>
   );
@@ -661,6 +887,20 @@ function rulesToDrafts(rules: RuleMap): RuleDrafts {
     drafts[section.key] = rules[section.key].join("\n");
     return drafts;
   }, {} as RuleDrafts);
+}
+
+function cloneRules(rules: RuleMap): RuleMap {
+  return ruleSections.reduce((drafts, section) => {
+    drafts[section.key] = [...(rules[section.key] || [])];
+    return drafts;
+  }, {} as RuleMap);
+}
+
+function cloneReferences(references: ReferenceEntry[]): ReferenceEntry[] {
+  return references.map((reference, index) => ({
+    ...reference,
+    id: `reference-${Date.now()}-${index}`
+  }));
 }
 
 function toRules(value: string): string[] {

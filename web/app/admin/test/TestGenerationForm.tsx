@@ -111,17 +111,17 @@ export default function TestGenerationForm(): ReactElement {
             <input id="mood" value={mood} onChange={(event) => setMood(event.target.value)} />
           </div>
           <div className="field">
-            <label htmlFor="brand">Brand</label>
+            <label htmlFor="brand">Content Category</label>
             <input id="brand" value={brand} onChange={(event) => setBrand(event.target.value)} />
           </div>
           <div className="field">
-            <label htmlFor="format">Format</label>
+            <label htmlFor="format">Content Format</label>
             <select id="format" value={format} onChange={(event) => setFormat(event.target.value)}>
-              <option value="cover">cover</option>
-              <option value="story">story</option>
-              <option value="information">information</option>
-              <option value="quote">quote</option>
-              <option value="closing">closing</option>
+              <option value="cover">Cover</option>
+              <option value="story">Story</option>
+              <option value="information">Information</option>
+              <option value="quote">Quote</option>
+              <option value="closing">Closing</option>
             </select>
           </div>
           <div className="field">
