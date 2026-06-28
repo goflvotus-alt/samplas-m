@@ -13,12 +13,15 @@ Inside it, add these layers:
 - `IMAGE`
 - `CAPTION`
 - `CATEGORY`
+- `CATEGORY_TEXT`
 - `OVERLAY`
 - `BACKGROUND`
 
-`TITLE`, `BODY`, `CAPTION`, and `CATEGORY` should be text layers. `IMAGE` must be a layer that supports fills, such as a rectangle or frame. `BACKGROUND` and `OVERLAY` should also be fillable layers, such as rectangles or frames.
+`TITLE`, `BODY`, `CAPTION`, `CATEGORY`, and `CATEGORY_TEXT` should be text layers. `IMAGE` must be a layer that supports fills, such as a rectangle or frame. `BACKGROUND` and `OVERLAY` should also be fillable layers, such as rectangles or frames.
 
 Only `TITLE` and `IMAGE` are required. The plugin updates the other layers when they exist.
+
+If your category pill or label container is a decorative shape, name the shape `CATEGORY_BG`, `CATEGORY_FRAME`, or `CATEGORY_BACKGROUND`. Use `CATEGORY_TEXT` for the editable category label. A legacy text layer named `CATEGORY` still works.
 
 ## Format Templates
 
@@ -54,7 +57,7 @@ The plugin reads these frames and shows them in the `양식` selector.
 Each format template can have its own layer structure. Use the same layer names inside each template:
 
 - Required: `TITLE`, `IMAGE`
-- Optional: `BODY`, `CAPTION`, `CATEGORY`, `OVERLAY`, `BACKGROUND`
+- Optional: `BODY`, `CAPTION`, `CATEGORY_TEXT`, `CATEGORY`, `OVERLAY`, `BACKGROUND`
 
 If a format-specific frame is missing, the plugin falls back to `CARD_TEMPLATE`.
 
@@ -117,8 +120,9 @@ The plugin UI expects the backend at `http://localhost:3000`. If you type the UR
 2. Write the overall mood.
 3. Add page-by-page content with the arrow/page controls.
 4. For each page, set format, category, title, text, photo, and photo focus.
-5. Click `AI로 다듬기` to polish the pages and generate cards.
-6. Use `템플릿 생성` to generate from the raw page inputs without the backend.
+5. Click `템플릿 검사` to check whether the template frames have the required layers.
+6. Click `AI로 다듬기` to polish the pages and generate cards.
+7. Use `템플릿 생성` to generate from the raw page inputs without the backend.
 
 Generated cards are placed on the current working page, to the right of the current selection or existing page content with 80px spacing. To export PNGs, select generated card frames and click `Export Selected PNG`.
 

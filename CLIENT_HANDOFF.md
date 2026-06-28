@@ -113,9 +113,12 @@ Optional:
 
 - `BODY`
 - `CAPTION`
+- `CATEGORY_TEXT`
 - `CATEGORY`
 - `OVERLAY`
 - `BACKGROUND`
+
+Use `CATEGORY_TEXT` when the category label should change. If the visible category pill is only a decorative shape, name it `CATEGORY_BG`, `CATEGORY_FRAME`, or `CATEGORY_BACKGROUND`. A legacy text layer named `CATEGORY` still works.
 
 ## Format Names
 
@@ -157,6 +160,8 @@ The plugin automatically reads these frames and shows them in the page `양식` 
 
 Each format frame may have a different layer structure. Only `TITLE` and `IMAGE` are required. Optional layers are filled only when present.
 
+Before delivery, open the plugin and click `템플릿 검사`. It reports missing required layers and warns when `CATEGORY` is being used as a decorative shape without `CATEGORY_TEXT`.
+
 ## Image Focus
 
 For each page, the user can choose:
@@ -189,11 +194,15 @@ Implemented as Vercel scaffold:
 - `/api/admin/settings`
 - `/api/brands`
 - `/api/feedback`
+- `/api/generation-history`
 
-Not implemented yet:
+Implemented with Redis when environment variables are connected:
 
-- Persistent admin login
-- Full database migration beyond Redis
+- Persistent admin login session
+- Editable guidelines
+- Editable brands
+- Editable feedback
+- Generation history
 
 Prepared for future implementation:
 

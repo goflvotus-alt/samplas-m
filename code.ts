@@ -31,6 +31,9 @@ type UiToPluginMessage =
       type: "load-formats";
     }
   | {
+      type: "validate-templates";
+    }
+  | {
       type: "generate-cards";
       cards: GeneratedCardInput[];
       sharedImageBytes?: number[];
@@ -60,17 +63,27 @@ type SizedSceneNode = SceneNode & {
   height: number;
 };
 
+type TemplateValidationReport = {
+  templateName: string;
+  format: string;
+  ok: boolean;
+  errors: string[];
+  warnings: string[];
+};
+
 const TEMPLATE_NAME = "CARD_TEMPLATE";
 const TEMPLATE_PAGE_NAME = "SAMPLAS_TEMPLATES";
 const TITLE_LAYER = "TITLE";
 const BODY_LAYER = "BODY";
 const CAPTION_LAYER = "CAPTION";
 const CATEGORY_LAYER = "CATEGORY";
+const CATEGORY_TEXT_LAYER = "CATEGORY_TEXT";
 const IMAGE_LAYER = "IMAGE";
 const OVERLAY_LAYER = "OVERLAY";
 const BACKGROUND_LAYER = "BACKGROUND";
 const CARD_SPACING = 80;
 const SETTINGS_KEY = "samplasMSettings";
+const DECORATIVE_CATEGORY_LAYERS = ["CATEGORY_FRAME", "CATEGORY_BG", "CATEGORY_BACKGROUND"];
 
 figma.ui.onmessage = async (message: UiToPluginMessage) => {
   try {
@@ -91,6 +104,11 @@ figma.ui.onmessage = async (message: UiToPluginMessage) => {
 
     if (message.type === "load-formats") {
       await postAvailableFormats();
+      return;
+    }
+
+    if (message.type === "validate-templates") {
+      await postTemplateValidation();
       return;
     }
 
@@ -156,11 +174,7 @@ async function postAvailableFormats(): Promise<void> {
 }
 
 function getAvailableFormats(templatePage: PageNode): Array<{ value: string; label: string; templateName: string; imageAspectRatio: number }> {
-  const templates = templatePage.findAll(
-    (node) =>
-      node.type === "FRAME" &&
-      (node.name === TEMPLATE_NAME || node.name.startsWith(`${TEMPLATE_NAME}_`))
-  ) as FrameNode[];
+  const templates = getTemplateFrames(templatePage);
 
   return templates
     .map((template) => {
@@ -186,6 +200,35 @@ function getAvailableFormats(templatePage: PageNode): Array<{ value: string; lab
       if (b.value === "") return 1;
       return a.label.localeCompare(b.label);
     });
+}
+
+async function postTemplateValidation(): Promise<void> {
+  const templatePage = await getTemplateSearchPage();
+  const reports = getTemplateFrames(templatePage).map(inspectTemplate);
+  const errorCount = reports.reduce((total, report) => total + report.errors.length, 0);
+  const warningCount = reports.reduce((total, report) => total + report.warnings.length, 0);
+
+  figma.ui.postMessage({
+    type: "template-validation",
+    templatePageName: templatePage.name,
+    reports,
+    errorCount,
+    warningCount
+  });
+
+  if (errorCount > 0) {
+    figma.notify(`${errorCount} template issue${errorCount === 1 ? "" : "s"} found.`, { error: true });
+  } else {
+    figma.notify(`Templates checked${warningCount ? ` with ${warningCount} warning${warningCount === 1 ? "" : "s"}` : ""}.`);
+  }
+}
+
+function getTemplateFrames(templatePage: PageNode): FrameNode[] {
+  return templatePage.findAll(
+    (node) =>
+      node.type === "FRAME" &&
+      (node.name === TEMPLATE_NAME || node.name.startsWith(`${TEMPLATE_NAME}_`))
+  ) as FrameNode[];
 }
 
 function getTemplateImageAspectRatio(template: FrameNode): number {
@@ -250,7 +293,7 @@ async function fillCard(frame: FrameNode, card: GeneratedCardInput, imageBytes?:
   const title = getLayer(frame, TITLE_LAYER);
   const body = getOptionalLayer(frame, BODY_LAYER);
   const caption = getOptionalLayer(frame, CAPTION_LAYER);
-  const category = getOptionalLayer(frame, CATEGORY_LAYER);
+  const category = getOptionalTextLayer(frame, [CATEGORY_TEXT_LAYER, CATEGORY_LAYER]);
   const image = getLayer(frame, IMAGE_LAYER);
   const overlay = getOptionalLayer(frame, OVERLAY_LAYER);
   const background = getOptionalLayer(frame, BACKGROUND_LAYER);
@@ -266,7 +309,7 @@ async function fillCard(frame: FrameNode, card: GeneratedCardInput, imageBytes?:
   }
 
   if (category) {
-    await setTextLayer(category, CATEGORY_LAYER, card.category || card.caption || "");
+    await setTextLayer(category, category.name, card.category || card.caption || "");
   }
 
   if (overlay) {
@@ -362,13 +405,79 @@ function getNodesBounds(nodes: readonly SceneNode[]): { x: number; y: number; wi
 }
 
 function validateTemplateLayers(template: FrameNode): void {
-  const missingLayers = [TITLE_LAYER, IMAGE_LAYER].filter(
-    (layerName) => !template.findOne((node) => node.name === layerName)
-  );
+  const report = inspectTemplate(template);
 
-  if (missingLayers.length > 0) {
-    throw new Error(`${template.name} is missing: ${missingLayers.join(", ")}.`);
+  if (report.errors.length > 0) {
+    throw new Error(`${template.name}: ${report.errors.join(" ")}`);
   }
+}
+
+function inspectTemplate(template: FrameNode): TemplateValidationReport {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const title = template.findOne((node) => node.name === TITLE_LAYER);
+  const image = template.findOne((node) => node.name === IMAGE_LAYER);
+  const optionalTextLayers = [BODY_LAYER, CAPTION_LAYER, CATEGORY_TEXT_LAYER];
+  const category = template.findOne((node) => node.name === CATEGORY_LAYER);
+
+  if (!title || !isSceneNode(title)) {
+    errors.push(`Missing ${TITLE_LAYER}.`);
+  } else if (title.type !== "TEXT") {
+    errors.push(`${TITLE_LAYER} must be a text layer.`);
+  }
+
+  if (!image || !isSceneNode(image)) {
+    errors.push(`Missing ${IMAGE_LAYER}.`);
+  } else if (!hasFills(image)) {
+    errors.push(`${IMAGE_LAYER} must support image fills.`);
+  } else if (!hasSize(image)) {
+    warnings.push(`${IMAGE_LAYER} has no measurable size; preview cropping may be inaccurate.`);
+  }
+
+  for (const layerName of optionalTextLayers) {
+    const layer = template.findOne((node) => node.name === layerName);
+
+    if (layer && (!isSceneNode(layer) || layer.type !== "TEXT")) {
+      errors.push(`${layerName} must be a text layer when used.`);
+    }
+  }
+
+  if (category && isSceneNode(category) && category.type !== "TEXT") {
+    warnings.push(`${CATEGORY_LAYER} is decorative. Use ${CATEGORY_TEXT_LAYER} for editable category text.`);
+  }
+
+  for (const layerName of [OVERLAY_LAYER, BACKGROUND_LAYER]) {
+    const layer = template.findOne((node) => node.name === layerName);
+
+    if (layer && !isSceneNode(layer)) {
+      errors.push(`${layerName} exists but is not a scene layer.`);
+    }
+  }
+
+  const overlay = template.findOne((node) => node.name === OVERLAY_LAYER);
+  if (overlay && isSceneNode(overlay) && !hasOpacity(overlay)) {
+    errors.push(`${OVERLAY_LAYER} must support opacity.`);
+  }
+
+  const background = template.findOne((node) => node.name === BACKGROUND_LAYER);
+  if (background && isSceneNode(background) && !hasFills(background)) {
+    errors.push(`${BACKGROUND_LAYER} must support fills.`);
+  }
+
+  const decorativeLayers = DECORATIVE_CATEGORY_LAYERS.filter((layerName) =>
+    Boolean(template.findOne((node) => node.name === layerName))
+  );
+  if (decorativeLayers.length > 0 && !template.findOne((node) => node.name === CATEGORY_TEXT_LAYER) && (!category || (isSceneNode(category) && category.type !== "TEXT"))) {
+    warnings.push(`Decorative category layers found. Add ${CATEGORY_TEXT_LAYER} if the category label should change.`);
+  }
+
+  return {
+    templateName: template.name,
+    format: template.name === TEMPLATE_NAME ? "default" : toTitleLabel(template.name.slice(TEMPLATE_NAME.length + 1)),
+    ok: errors.length === 0,
+    errors,
+    warnings
+  };
 }
 
 function getTemplateNamesForFormat(format?: string): string[] {
@@ -420,6 +529,32 @@ function getOptionalLayer(frame: FrameNode, layerName: string): SceneNode | null
   }
 
   return layer;
+}
+
+function getOptionalTextLayer(frame: FrameNode, layerNames: string[]): TextNode | null {
+  for (const layerName of layerNames) {
+    const layer = frame.findOne((node) => node.name === layerName);
+
+    if (!layer) {
+      continue;
+    }
+
+    if (!isSceneNode(layer)) {
+      throw new Error(`"${layerName}" exists but is not a scene layer.`);
+    }
+
+    if (layer.type === "TEXT") {
+      return layer;
+    }
+
+    if (layerName === CATEGORY_LAYER) {
+      continue;
+    }
+
+    throw new Error(`"${layerName}" must be a text layer.`);
+  }
+
+  return null;
 }
 
 function isSceneNode(node: BaseNode): node is SceneNode {

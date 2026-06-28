@@ -4,6 +4,7 @@ import { isRedisConfigured, redisCommand, type StorageStatus } from "@/lib/redis
 export interface BrandEntry {
   brandName: string;
   designer: string;
+  brandImage: string;
   keywords: string[];
   description: string;
   comparableBrands: string[];
@@ -11,6 +12,7 @@ export interface BrandEntry {
 }
 
 const BRANDS_KEY = "samplas-m:brands:active";
+const LEGACY_BRAND_IMAGE_NOTE_PREFIX = "Brand Image:";
 const MAX_BRANDS = 200;
 const MAX_LIST_ITEMS = 60;
 const MAX_TEXT_LENGTH = 1800;
@@ -111,6 +113,7 @@ export function formatBrandsForPrompt(brands: BrandEntry[], selectedNames: strin
       [
         `Brand: ${brand.brandName}`,
         brand.designer ? `Designer: ${brand.designer}` : "",
+        brand.brandImage ? `Brand image: ${brand.brandImage}` : "",
         brand.keywords.length ? `Keywords: ${brand.keywords.join(", ")}` : "",
         brand.description ? `Description: ${brand.description}` : "",
         brand.comparableBrands.length ? `Comparable brands: ${brand.comparableBrands.join(", ")}` : "",
@@ -144,15 +147,23 @@ function normalizeBrands(input: unknown): BrandEntry[] {
 
 function normalizeBrand(input: unknown): BrandEntry {
   const source = asObject(input);
+  const notes = normalizeList(source.notes);
 
   return {
     brandName: normalizeText(source.brandName),
     designer: normalizeText(source.designer),
+    brandImage: normalizeText(source.brandImage) || extractLegacyBrandImage(notes),
     keywords: normalizeList(source.keywords),
     description: normalizeText(source.description),
     comparableBrands: normalizeList(source.comparableBrands),
-    notes: normalizeList(source.notes)
+    notes: notes.filter((note) => !note.startsWith(LEGACY_BRAND_IMAGE_NOTE_PREFIX))
   };
+}
+
+function extractLegacyBrandImage(notes: string[]): string {
+  const imageNote = notes.find((note) => note.startsWith(LEGACY_BRAND_IMAGE_NOTE_PREFIX));
+
+  return imageNote ? normalizeText(imageNote.slice(LEGACY_BRAND_IMAGE_NOTE_PREFIX.length)) : "";
 }
 
 function normalizeList(input: unknown): string[] {

@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type GenerateResult = {
   postCaption?: string;
@@ -18,6 +18,13 @@ type GenerateResult = {
   details?: string;
 };
 
+type GenerationHistoryEntry = {
+  id: string;
+  timestamp: string;
+  mode: string;
+  output: GenerateResult;
+};
+
 export default function TestGenerationForm(): ReactElement {
   const [topic, setTopic] = useState("뉴 시즌 에디토리얼 카드뉴스");
   const [mood, setMood] = useState("차분하고 편집적인 톤");
@@ -29,6 +36,27 @@ export default function TestGenerationForm(): ReactElement {
   const [result, setResult] = useState<GenerateResult | null>(null);
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
+  const [history, setHistory] = useState<GenerationHistoryEntry[]>([]);
+
+  useEffect(() => {
+    void loadHistory();
+  }, []);
+
+  async function loadHistory(): Promise<void> {
+    try {
+      const response = await fetch("/api/generation-history?limit=8", {
+        cache: "no-store",
+        credentials: "same-origin"
+      });
+      const json = (await response.json()) as { history?: GenerationHistoryEntry[] };
+
+      if (response.ok) {
+        setHistory(Array.isArray(json.history) ? json.history : []);
+      }
+    } catch (error) {
+      console.error("[admin-test] Could not load generation history", error);
+    }
+  }
 
   async function generate(): Promise<void> {
     setLoading(true);
@@ -63,6 +91,10 @@ export default function TestGenerationForm(): ReactElement {
       const json = (await response.json()) as GenerateResult;
       setResult(json);
       setStatus(response.ok ? "Generated." : "Generation failed.");
+
+      if (response.ok) {
+        void loadHistory();
+      }
     } catch (error) {
       setResult({
         error: error instanceof Error ? error.message : "Request failed."
@@ -199,7 +231,44 @@ export default function TestGenerationForm(): ReactElement {
             </button>
           </div>
         </section>
+
+        <section className="preview-block history-panel">
+          <div className="button-row split-row">
+            <h3>Generation History</h3>
+            <button className="button secondary compact" onClick={loadHistory} type="button">
+              Reload
+            </button>
+          </div>
+          <div className="history-list">
+            {history.length ? (
+              history.map((entry) => (
+                <article key={entry.id}>
+                  <span>{formatTimestamp(entry.timestamp)}</span>
+                  <strong>{entry.output.cards?.[0]?.title || "Untitled generation"}</strong>
+                  <p>{entry.output.postCaption || `${entry.output.cards?.length || 0} cards`}</p>
+                </article>
+              ))
+            ) : (
+              <p>No saved generations yet.</p>
+            )}
+          </div>
+        </section>
       </section>
     </div>
   );
+}
+
+function formatTimestamp(value: string): string {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleString("ko-KR", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
 }

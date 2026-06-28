@@ -14,12 +14,13 @@ Avoid mixing Content Category with Brand unless the category is intentionally a 
 
 ## Visual Direction
 
-The interface should feel compact, editorial, and operational.
+The interface should feel clean, compact, editorial, and operational.
 
 References:
 
+- Apple platform UI restraint
 - Kinfolk-like editorial restraint
-- Balenciaga-like black/white structure
+- Balenciaga-like structural confidence
 - Internal publishing tools
 
 Avoid:
@@ -27,23 +28,25 @@ Avoid:
 - Startup dashboard cards
 - Oversized SaaS panels
 - Decorative gradients or colorful widgets
+- Heavy black border systems
 
 ## Core Tokens
 
-- Background: `#ffffff`
-- Ink: `#000000`
-- Accent blue: `#005bff`
-- Secondary surface: `#f2f7ff`
-- Secondary text: `#777777`
-- Borders: 1px solid black
-- Radius: 0
+- Background: `#f5f5f7`
+- Panel: `rgba(255, 255, 255, 0.94)`
+- Ink: `#1d1d1f`
+- Accent blue: `#0071e3`
+- Secondary surface: `#eef5ff`
+- Secondary text: `#6e6e73`
+- Borders: 1px solid `#d2d2d7`
+- Radius: 12-18px for panels, 999px for compact buttons
 
 ## Typography
 
 Use the Apple Korean system stack:
 
 ```css
-"Apple SD Gothic Neo", "Apple Gothic", "Malgun Gothic", Arial, sans-serif
+-apple-system, BlinkMacSystemFont, "SF Pro Text", "Apple SD Gothic Neo", "Apple Gothic", "Malgun Gothic", Arial, sans-serif
 ```
 
 Keep UI text compact:
@@ -68,3 +71,11 @@ Keep UI text compact:
 | AI guideline category | Content Category | 콘텐츠 카테고리 |
 | Image crop intent | Image Focus | 사진 초점 |
 | Overall direction | Mood | 전체 분위기 |
+
+## Template Layer Language
+
+- `TITLE` and `IMAGE` are required.
+- `BODY`, `CAPTION`, `OVERLAY`, and `BACKGROUND` are optional.
+- Use `CATEGORY_TEXT` for editable category text.
+- Use `CATEGORY`, `CATEGORY_FRAME`, `CATEGORY_BG`, or `CATEGORY_BACKGROUND` only for decorative category shapes when needed.
+- The plugin template validator should be used before client delivery.

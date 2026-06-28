@@ -78,7 +78,7 @@ Rules:
 
 ## Future Admin API
 
-These endpoints are future contracts for the Vercel system.
+These endpoints are implemented or reserved contracts for the Vercel system.
 
 ### GET /api/guidelines
 
@@ -197,6 +197,22 @@ Request:
 
 Returns brand knowledge entries.
 
+Response:
+
+```json
+[
+  {
+    "brandName": "Brand",
+    "designer": "Designer",
+    "brandImage": "https://example.com/image.jpg",
+    "keywords": [],
+    "description": "Brand description",
+    "comparableBrands": [],
+    "notes": []
+  }
+]
+```
+
 ### POST /api/brands
 
 Creates a brand entry.
@@ -204,7 +220,8 @@ Creates a brand entry.
 Requires:
 
 ```text
-x-admin-password: current-admin-password
+Admin session cookie after login
+x-admin-password: current-admin-password for direct API calls
 ```
 
 ### PUT /api/brands/:brandName
@@ -214,7 +231,8 @@ Updates a brand entry.
 Requires:
 
 ```text
-x-admin-password: current-admin-password
+Admin session cookie after login
+x-admin-password: current-admin-password for direct API calls
 ```
 
 ### DELETE /api/brands/:brandName
@@ -224,7 +242,8 @@ Deletes a brand entry.
 Requires:
 
 ```text
-x-admin-password: current-admin-password
+Admin session cookie after login
+x-admin-password: current-admin-password for direct API calls
 ```
 
 ### GET /api/feedback
@@ -254,7 +273,8 @@ Updates feedback status.
 Requires:
 
 ```text
-x-admin-password: current-admin-password
+Admin session cookie after login
+x-admin-password: current-admin-password for direct API calls
 ```
 
 Allowed statuses:
@@ -271,7 +291,45 @@ Deletes a feedback entry.
 Requires:
 
 ```text
-x-admin-password: current-admin-password
+Admin session cookie after login
+x-admin-password: current-admin-password for direct API calls
+```
+
+### GET /api/generation-history
+
+Returns recent AI generation history for the admin test room.
+
+Requires:
+
+```text
+Admin session cookie after login
+x-admin-password: current-admin-password for direct API calls
+```
+
+Query:
+
+```text
+limit=40
+```
+
+Response:
+
+```json
+{
+  "ok": true,
+  "history": [
+    {
+      "id": "generation-...",
+      "timestamp": "2026-06-18T00:00:00.000Z",
+      "mode": "pages",
+      "input": {},
+      "output": {
+        "postCaption": "string",
+        "cards": []
+      }
+    }
+  ]
+}
 ```
 
 ### GET /api/admin/settings
@@ -296,7 +354,8 @@ Changes the admin password when Redis storage is configured.
 Headers:
 
 ```text
-x-admin-password: current-password
+Admin session cookie after login
+x-admin-password: current-password for direct API calls
 ```
 
 Request:

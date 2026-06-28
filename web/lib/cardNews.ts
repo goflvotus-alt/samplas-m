@@ -1,6 +1,7 @@
 import { ApiError } from "@/lib/apiError";
 import { formatBrandsForPrompt, getBrands, type BrandEntry } from "@/lib/brandStore";
 import { formatUsefulFeedbackForPrompt, getFeedbackEntries, type FeedbackEntry } from "@/lib/feedbackStore";
+import { saveGenerationHistory } from "@/lib/generationHistoryStore";
 import { formatGuidelinesForPrompt, getGuidelines, type Guidelines } from "@/lib/guidelineStore";
 import type { GeneratedCard, GenerateCardNewsResponse, ImageFocus, NormalizedRequest, PageInput } from "@/lib/types";
 
@@ -51,10 +52,18 @@ export async function generateCardNews(rawBody: unknown): Promise<GenerateCardNe
     throw new ApiError(502, "OpenAI returned a response that did not match the expected JSON format.");
   }
 
-  return {
+  const response = {
     postCaption: toStringValue(parsed.postCaption || input.postCaption).trim(),
     cards: normalizeCards(parsed.cards, input.cardCount)
   };
+
+  try {
+    await saveGenerationHistory(input, response);
+  } catch (error) {
+    console.error("[generation-history] Could not save generation history", error);
+  }
+
+  return response;
 }
 
 function normalizeRequestBody(body: unknown): NormalizedRequest {

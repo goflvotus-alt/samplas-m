@@ -31,8 +31,8 @@ When importing this repository into Vercel:
   - `ADMIN_SESSION_SECRET` optional
   - `OPENAI_MODEL` optional
   - `OPENAI_REASONING_EFFORT` optional
-  - `UPSTASH_REDIS_REST_URL` for editable guideline storage
-  - `UPSTASH_REDIS_REST_TOKEN` for editable guideline storage
+  - `UPSTASH_REDIS_REST_URL` for editable admin storage
+  - `UPSTASH_REDIS_REST_TOKEN` for editable admin storage
 
 After deployment, test:
 
@@ -72,6 +72,7 @@ Implemented:
 - `POST /api/feedback`
 - `PATCH /api/feedback/:id`
 - `DELETE /api/feedback/:id`
+- `GET /api/generation-history`
 - `GET /api/admin/settings`
 - `PATCH /api/admin/settings`
 
@@ -109,6 +110,18 @@ Saved guidelines are included in future `POST /api/generate-card-news` prompts.
 `/admin/feedback` can mark feedback as `reviewed`, `useful`, or `ignored`, and can delete feedback entries.
 
 Saved brand data and useful feedback are included in future `POST /api/generate-card-news` prompts.
+
+Brand entries include a first-class `brandImage` field. Older records that stored image URLs inside notes are still read safely.
+
+## Generation History
+
+Successful `POST /api/generate-card-news` calls are saved to Redis when storage is configured.
+
+`/admin/test` shows recent generation history through:
+
+```text
+GET /api/generation-history
+```
 
 ## Admin Password
 

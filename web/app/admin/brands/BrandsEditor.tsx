@@ -29,7 +29,7 @@ type ImportedBrand = {
   description: string;
 };
 
-const BRAND_IMAGE_NOTE_PREFIX = "Brand Image:";
+const LEGACY_BRAND_IMAGE_NOTE_PREFIX = "Brand Image:";
 
 export default function BrandsEditor(): ReactElement {
   const [brands, setBrands] = useState<BrandEntry[]>([]);
@@ -93,7 +93,7 @@ export default function BrandsEditor(): ReactElement {
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify(toPersistedBrand(draft)),
+        body: JSON.stringify(draft),
         credentials: "same-origin"
       });
 
@@ -232,7 +232,7 @@ export default function BrandsEditor(): ReactElement {
             "Content-Type": "application/json"
           },
           body: JSON.stringify(
-            toPersistedBrand({
+            {
               brandName: importedBrand.brandName,
               designer: existingBrand?.designer || "",
               keywords: existingBrand?.keywords || [],
@@ -240,7 +240,7 @@ export default function BrandsEditor(): ReactElement {
               comparableBrands: existingBrand?.comparableBrands || [],
               notes: existingBrand?.notes || [],
               brandImage: importedBrand.brandImage || existingBrand?.brandImage || ""
-            })
+            }
           ),
           credentials: "same-origin"
         });
@@ -430,8 +430,8 @@ function normalizeBrands(input: unknown): BrandEntry[] {
       keywords: Array.isArray(source.keywords) ? source.keywords.map(String) : [],
       description: String(source.description || ""),
       comparableBrands: Array.isArray(source.comparableBrands) ? source.comparableBrands.map(String) : [],
-      notes: rawNotes.filter((note) => !note.startsWith(BRAND_IMAGE_NOTE_PREFIX)),
-      brandImage: extractBrandImage(rawNotes)
+      notes: rawNotes.filter((note) => !note.startsWith(LEGACY_BRAND_IMAGE_NOTE_PREFIX)),
+      brandImage: String(source.brandImage || "").trim() || extractLegacyBrandImage(rawNotes)
     };
   });
 }
@@ -464,27 +464,10 @@ function normalizeImportedBrands(input: unknown): ImportedBrand[] {
   return brands;
 }
 
-function toPersistedBrand(brand: BrandEntry): Omit<BrandEntry, "brandImage"> {
-  const notes = brand.notes.filter((note) => !note.startsWith(BRAND_IMAGE_NOTE_PREFIX));
+function extractLegacyBrandImage(notes: string[]): string {
+  const imageNote = notes.find((note) => note.startsWith(LEGACY_BRAND_IMAGE_NOTE_PREFIX));
 
-  if (brand.brandImage.trim()) {
-    notes.unshift(`${BRAND_IMAGE_NOTE_PREFIX} ${brand.brandImage.trim()}`);
-  }
-
-  return {
-    brandName: brand.brandName,
-    designer: brand.designer,
-    keywords: brand.keywords,
-    description: brand.description,
-    comparableBrands: brand.comparableBrands,
-    notes
-  };
-}
-
-function extractBrandImage(notes: string[]): string {
-  const imageNote = notes.find((note) => note.startsWith(BRAND_IMAGE_NOTE_PREFIX));
-
-  return imageNote ? imageNote.slice(BRAND_IMAGE_NOTE_PREFIX.length).trim() : "";
+  return imageNote ? imageNote.slice(LEGACY_BRAND_IMAGE_NOTE_PREFIX.length).trim() : "";
 }
 
 function normalizeKey(value: string): string {
